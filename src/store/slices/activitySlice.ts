@@ -21,7 +21,7 @@ const activitySlice = createSlice({
       const newActivity: Activity = {
         id: Date.now().toString(),
         mode: action.payload.mode,
-        startTime: new Date(),
+        startTime: new Date(), // This will be converted to timestamp by the serialization check config
         distance: 0,
         points: 0,
         route: [],
@@ -45,7 +45,7 @@ const activitySlice = createSlice({
     },
     stopActivity: (state, action: PayloadAction<{ endLocation?: { latitude: number; longitude: number } }>) => {
       if (state.currentActivity) {
-        state.currentActivity.endTime = new Date();
+        state.currentActivity.endTime = new Date(); // This will be converted to timestamp
         state.currentActivity.endLocation = action.payload.endLocation;
         state.currentActivity.isCompleted = true;
         

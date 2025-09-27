@@ -1,193 +1,252 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { signOutUser } from '../store/slices/authSlice';
+import FirebaseService, { WalkHistoryEntry } from '../services/firebaseService';
 
 const ProfileScreen: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const userProfile = useSelector((state: RootState) => state.user.profile);
-  // Temporarily using empty array instead of complex selector
-  const activities: any[] = [];
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
+  const [firebaseService] = useState(() => FirebaseService.getInstance());
+  const [walkHistory, setWalkHistory] = useState<WalkHistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
 
-  const getProgressToNextLevel = () => {
-    const currentPoints = userProfile?.totalPoints || 0;
-    const pointsInCurrentLevel = currentPoints % 100;
-    return (pointsInCurrentLevel / 100) * 100;
+  useEffect(() => {
+    loadUserData();
+  }, [currentUser]);
+
+  const loadUserData = async () => {
+    if (!currentUser) return;
+    
+    setIsLoading(true);
+    try {
+      // Load user profile from Firebase
+      const profile = await firebaseService.getUserProfile(currentUser.uid);
+      setFirebaseProfile(profile);
+      
+      // Load walk history (with error handling for index issues)
+      try {
+        const history = await firebaseService.getUserWalkHistory(currentUser.uid, 10);
+        setWalkHistory(history);
+      } catch (historyError) {
+        console.log('Walk history not available yet (index may be building):', historyError);
+        setWalkHistory([]); // Set empty array so UI doesn't break
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const getActivityStats = () => {
-    return { walkCount: 0, cycleCount: 0, transitCount: 0 };
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadUserData();
+    setRefreshing(false);
   };
 
-  const { walkCount, cycleCount, transitCount } = getActivityStats();
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(signOutUser()).unwrap();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
-  const achievements = [
-    { id: 1, title: 'First Steps', description: 'Complete your first walk', icon: 'footsteps', achieved: walkCount > 0 },
-    { id: 2, title: 'Cyclist', description: 'Complete your first bike ride', icon: 'bicycle', achieved: cycleCount > 0 },
-    { id: 3, title: 'Commuter', description: 'Use public transport', icon: 'bus', achieved: transitCount > 0 },
-    { id: 4, title: 'Eco Warrior', description: 'Reach 500 points', icon: 'leaf', achieved: (userProfile?.totalPoints || 0) >= 500 },
-    { id: 5, title: 'Distance Master', description: 'Walk 10km total', icon: 'trophy', achieved: (userProfile?.totalDistance || 0) >= 10 },
-    { id: 6, title: 'Level Up!', description: 'Reach level 5', icon: 'star', achieved: (userProfile?.level || 1) >= 5 },
-  ];
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const profileData = firebaseProfile || userProfile;
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header */}
         <LinearGradient
           colors={['#4ECDC4', '#44A08D'] as const}
-          style={styles.headerGradient}
+          style={styles.header}
         >
-          <View style={styles.profileHeader}>
+          <View style={styles.profileInfo}>
             <View style={styles.avatarContainer}>
               <Ionicons name="person" size={48} color="#FFFFFF" />
             </View>
-            <Text style={styles.userName}>{userProfile?.name}</Text>
-            <Text style={styles.userLevel}>Level {userProfile?.level || 1}</Text>
+            <Text style={styles.userName}>{profileData?.name || currentUser?.displayName || 'EcoUser'}</Text>
+            <Text style={styles.userEmail}>{profileData?.email || currentUser?.email || ''}</Text>
           </View>
+          
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Stats Cards */}
-        <View style={styles.statsSection}>
-          <View style={styles.statsGrid}>
+        <View style={styles.statsContainer}>
+          <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userProfile?.totalPoints || 0}</Text>
-              <Text style={styles.statLabel}>Total Points</Text>
+              <Ionicons name="flash" size={32} color="#4ECDC4" />
+              <Text style={styles.statNumber}>{profileData?.totalPoints || 0}</Text>
+              <Text style={styles.statLabel}>Points</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userProfile?.activitiesCompleted || 0}</Text>
+              <Ionicons name="trophy" size={32} color="#F39C12" />
+              <Text style={styles.statNumber}>{profileData?.level || 1}</Text>
+              <Text style={styles.statLabel}>Level</Text>
+            </View>
+          </View>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Ionicons name="walk" size={32} color="#27AE60" />
+              <Text style={styles.statNumber}>{profileData?.activitiesCompleted || 0}</Text>
               <Text style={styles.statLabel}>Activities</Text>
             </View>
-          </View>
-          
-          <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{(userProfile?.totalDistance || 0).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Distance (km)</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userProfile?.badges?.length || 0}</Text>
-              <Text style={styles.statLabel}>Badges</Text>
+              <Ionicons name="map" size={32} color="#E74C3C" />
+              <Text style={styles.statNumber}>{(profileData?.totalDistance || 0).toFixed(1)}</Text>
+              <Text style={styles.statLabel}>km Walked</Text>
             </View>
           </View>
         </View>
 
-        {/* Progress to Next Level */}
-        <View style={styles.progressSection}>
-          <Text style={styles.sectionTitle}>Progress to Next Level</Text>
-          <View style={styles.progressCard}>
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressText}>
-                {(userProfile?.totalPoints || 0) % 100} / 100 points
-              </Text>
-              <Text style={styles.progressSubtext}>
-                {100 - ((userProfile?.totalPoints || 0) % 100)} points to level {(userProfile?.level || 1) + 1}
-              </Text>
+        {/* Recent Walks */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Walks</Text>
+            <TouchableOpacity onPress={loadUserData}>
+              <Ionicons name="refresh" size={20} color="#4ECDC4" />
+            </TouchableOpacity>
+          </View>
+          
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading walks...</Text>
             </View>
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[styles.progressFill, { width: `${getProgressToNextLevel()}%` }]} 
-                />
+          ) : walkHistory.length > 0 ? (
+            walkHistory.map((walk) => (
+              <View key={walk.id} style={styles.walkCard}>
+                <View style={styles.walkHeader}>
+                  <View style={styles.walkIcon}>
+                    <Ionicons name="walk" size={24} color="#4ECDC4" />
+                  </View>
+                  <View style={styles.walkInfo}>
+                    <Text style={styles.walkDate}>{formatDate(walk.createdAt)}</Text>
+                    <Text style={styles.walkTime}>{formatDuration(walk.duration)}</Text>
+                  </View>
+                  <View style={styles.walkStats}>
+                    <Text style={styles.walkDistance}>{walk.distance.toFixed(2)} km</Text>
+                    <Text style={styles.walkPoints}>+{walk.points} pts</Text>
+                  </View>
+                </View>
               </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="walk-outline" size={64} color="#BDC3C7" />
+              <Text style={styles.emptyTitle}>No walks yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Start your first eco-friendly walk to see your activity here!
+              </Text>
             </View>
-          </View>
-        </View>
-
-        {/* Activity Breakdown */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Activity Breakdown</Text>
-          
-          <View style={styles.activityItem}>
-            <View style={styles.activityIcon}>
-              <Ionicons name="walk" size={24} color="#4ECDC4" />
-            </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityName}>Walking</Text>
-              <Text style={styles.activityCount}>{walkCount} activities</Text>
-            </View>
-            <Text style={styles.activityPoints}>10 pts/km</Text>
-          </View>
-          
-          <View style={styles.activityItem}>
-            <View style={styles.activityIcon}>
-              <Ionicons name="bicycle" size={24} color="#FFD93D" />
-            </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityName}>Cycling</Text>
-              <Text style={styles.activityCount}>{cycleCount} activities</Text>
-            </View>
-            <Text style={styles.activityPoints}>8 pts/km</Text>
-          </View>
-          
-          <View style={styles.activityItem}>
-            <View style={styles.activityIcon}>
-              <Ionicons name="bus" size={24} color="#A8C8EC" />
-            </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityName}>Public Transport</Text>
-              <Text style={styles.activityCount}>{transitCount} activities</Text>
-            </View>
-            <Text style={styles.activityPoints}>4 pts/km</Text>
-          </View>
+          )}
         </View>
 
         {/* Achievements */}
-        <View style={styles.achievementsSection}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Achievements</Text>
-          {achievements.map((achievement) => (
-            <View 
-              key={achievement.id} 
-              style={[
-                styles.achievementItem,
-                achievement.achieved ? styles.achievementAchieved : styles.achievementLocked
-              ]}
-            >
-              <View style={[
-                styles.achievementIcon,
-                achievement.achieved ? styles.achievementIconAchieved : styles.achievementIconLocked
-              ]}>
-                <Ionicons 
-                  name={achievement.icon as keyof typeof Ionicons.glyphMap} 
-                  size={20} 
-                  color={achievement.achieved ? "#4ECDC4" : "#BDC3C7"} 
-                />
+          
+          <View style={styles.achievementCard}>
+            <View style={styles.achievementIcon}>
+              <Ionicons name="leaf" size={32} color="#27AE60" />
+            </View>
+            <View style={styles.achievementInfo}>
+              <Text style={styles.achievementTitle}>Eco Warrior</Text>
+              <Text style={styles.achievementDesc}>Keep making eco-friendly choices!</Text>
+            </View>
+            <View style={styles.achievementBadge}>
+              <Text style={styles.achievementLevel}>✓</Text>
+            </View>
+          </View>
+
+          {profileData?.totalPoints >= 100 && (
+            <View style={styles.achievementCard}>
+              <View style={styles.achievementIcon}>
+                <Ionicons name="star" size={32} color="#F39C12" />
               </View>
               <View style={styles.achievementInfo}>
-                <Text style={[
-                  styles.achievementTitle,
-                  achievement.achieved ? styles.achievementTitleAchieved : styles.achievementTitleLocked
-                ]}>
-                  {achievement.title}
-                </Text>
-                <Text style={styles.achievementDescription}>
-                  {achievement.description}
-                </Text>
+                <Text style={styles.achievementTitle}>Point Collector</Text>
+                <Text style={styles.achievementDesc}>Earned 100+ points</Text>
               </View>
-              {achievement.achieved && (
-                <Ionicons name="checkmark-circle" size={24} color="#4ECDC4" />
-              )}
+              <View style={styles.achievementBadge}>
+                <Text style={styles.achievementLevel}>★</Text>
+              </View>
             </View>
-          ))}
+          )}
+
+          {(profileData?.activitiesCompleted || 0) >= 5 && (
+            <View style={styles.achievementCard}>
+              <View style={styles.achievementIcon}>
+                <Ionicons name="footsteps" size={32} color="#8E44AD" />
+              </View>
+              <View style={styles.achievementInfo}>
+                <Text style={styles.achievementTitle}>Regular Walker</Text>
+                <Text style={styles.achievementDesc}>Completed 5+ activities</Text>
+              </View>
+              <View style={styles.achievementBadge}>
+                <Text style={styles.achievementLevel}>🚶</Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Get Started */}
-        <View style={styles.getStartedSection}>
-          <Text style={styles.sectionTitle}>Get Started</Text>
-          <View style={styles.tipCard}>
-            <Ionicons name="walk" size={32} color="#4ECDC4" />
-            <Text style={styles.tipTitle}>Start Walking!</Text>
-            <Text style={styles.tipDescription}>
-              Head to the Home screen and tap "Walk on Foot" to start earning points for your eco-friendly activities.
+        {/* App Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoText}>
+              EcoSteps helps you make eco-friendly transport choices while earning rewards. 
+              Every step counts toward a greener future!
             </Text>
+            <Text style={styles.versionText}>Version 1.0.0</Text>
           </View>
         </View>
       </ScrollView>
@@ -200,17 +259,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
-  headerGradient: {
-    paddingBottom: 40,
-    paddingTop: 20,
+  scrollView: {
+    flex: 1,
   },
-  profileHeader: {
+  header: {
+    padding: 24,
+    paddingTop: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  profileInfo: {
+    flex: 1,
     alignItems: 'center',
   },
   avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -222,168 +288,160 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 4,
   },
-  userLevel: {
+  userEmail: {
     fontSize: 16,
-    color: '#FFFFFF',
-    opacity: 0.9,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  statsSection: {
-    padding: 20,
-    marginTop: -20,
+  signOutButton: {
+    padding: 8,
   },
-  statsGrid: {
+  statsContainer: {
+    padding: 16,
+    paddingTop: 24,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   statCard: {
-    backgroundColor: '#FFFFFF',
     flex: 1,
-    marginHorizontal: 6,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 4,
     alignItems: 'center',
     elevation: 2,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  statValue: {
-    fontSize: 28,
+  statNumber: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 4,
+    marginTop: 8,
   },
   statLabel: {
     fontSize: 14,
     color: '#7F8C8D',
-    textAlign: 'center',
+    marginTop: 4,
   },
-  progressSection: {
-    padding: 20,
-    paddingTop: 0,
+  section: {
+    margin: 16,
+    marginTop: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 16,
   },
-  progressCard: {
+  loadingContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7F8C8D',
+  },
+  walkCard: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  progressInfo: {
-    marginBottom: 12,
-  },
-  progressText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  progressSubtext: {
-    fontSize: 14,
-    color: '#7F8C8D',
-  },
-  progressBarContainer: {
-    marginTop: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#E8E8E8',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4ECDC4',
-    borderRadius: 4,
-  },
-  activitySection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  activityItem: {
+  walkHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    elevation: 1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  activityIcon: {
+  walkIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#E8F8F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  activityInfo: {
+  walkInfo: {
     flex: 1,
   },
-  activityName: {
+  walkDate: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 2,
   },
-  activityCount: {
+  walkTime: {
     fontSize: 14,
     color: '#7F8C8D',
+    marginTop: 2,
   },
-  activityPoints: {
-    fontSize: 14,
+  walkStats: {
+    alignItems: 'flex-end',
+  },
+  walkDistance: {
+    fontSize: 16,
     fontWeight: 'bold',
+    color: '#27AE60',
+  },
+  walkPoints: {
+    fontSize: 14,
     color: '#4ECDC4',
+    marginTop: 2,
   },
-  achievementsSection: {
-    padding: 20,
-    paddingTop: 0,
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  achievementItem: {
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  achievementCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    padding: 16,
     borderRadius: 12,
-    marginBottom: 8,
-    elevation: 1,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  achievementAchieved: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#4ECDC4',
-  },
-  achievementLocked: {
-    opacity: 0.6,
+    shadowRadius: 4,
   },
   achievementIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  achievementIconAchieved: {
-    backgroundColor: '#E8F8F5',
-  },
-  achievementIconLocked: {
-    backgroundColor: '#F8F9FA',
   },
   achievementInfo: {
     flex: 1,
@@ -391,44 +449,45 @@ const styles = StyleSheet.create({
   achievementTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  achievementTitleAchieved: {
     color: '#2C3E50',
   },
-  achievementTitleLocked: {
-    color: '#7F8C8D',
-  },
-  achievementDescription: {
+  achievementDesc: {
     fontSize: 14,
     color: '#7F8C8D',
+    marginTop: 2,
   },
-  getStartedSection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  tipCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
+  achievementBadge: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
+    backgroundColor: '#4ECDC4',
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  achievementLevel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
     elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  tipDescription: {
+  infoText: {
     fontSize: 14,
     color: '#7F8C8D',
-    textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 16,
+  },
+  versionText: {
+    fontSize: 12,
+    color: '#BDC3C7',
+    textAlign: 'center',
   },
 });
 

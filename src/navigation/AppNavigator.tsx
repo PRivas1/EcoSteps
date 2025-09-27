@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,15 +92,14 @@ const MainTabs = () => {
 
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: styles.header,
-          headerTintColor: '#2C3E50',
-          headerTitleStyle: styles.headerTitle,
-          headerTitleAlign: 'center',
-        }}
-      >
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: styles.header,
+        headerTintColor: '#2C3E50',
+        headerTitleStyle: styles.headerTitle,
+        headerTitleAlign: 'center',
+      }}
+    >
         <Stack.Screen 
           name="MainTabs" 
           component={MainTabs} 
@@ -140,8 +138,7 @@ const AppNavigator = () => {
             gestureEnabled: false,
           }}
         />
-      </Stack.Navigator>
-    </NavigationContainer>
+    </Stack.Navigator>
   );
 };
 

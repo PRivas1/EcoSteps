@@ -3,9 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -71,7 +72,12 @@ const ActivityCompletionScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         {/* Success Animation Area */}
         <View style={styles.celebrationSection}>
           <Text style={styles.modeEmoji}>{getModeEmoji()}</Text>
@@ -143,7 +149,10 @@ const ActivityCompletionScreen: React.FC = () => {
             <Text style={styles.achievementText}>Eco Champion</Text>
           </View>
         </View>
-      </View>
+
+        {/* Extra padding for comfortable scrolling */}
+        <View style={styles.bottomPadding} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -152,6 +161,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 20,
   },
   content: {
     flex: 1,
@@ -298,6 +314,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#856404',
+  },
+  bottomPadding: {
+    height: 30,
   },
 });
 

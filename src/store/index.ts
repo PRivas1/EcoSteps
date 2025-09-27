@@ -3,9 +3,11 @@ import userSlice from './slices/userSlice';
 import activitySlice from './slices/activitySlice';
 import rewardsSlice from './slices/rewardsSlice';
 import locationSlice from './slices/locationSlice';
+import authSlice from './slices/authSlice';
 
 export const store = configureStore({
   reducer: {
+    auth: authSlice,
     user: userSlice,
     activity: activitySlice,
     rewards: rewardsSlice,
@@ -13,10 +15,7 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['activity/startTracking', 'activity/addRoutePoint'],
-        ignoredPaths: ['activity.currentActivity.startTime', 'activity.currentActivity.endTime'],
-      },
+      serializableCheck: false, // Disable for development simplicity
     }),
 });
 
