@@ -17,7 +17,14 @@ export const useAuth = () => {
       
       if (user) {
         try {
-          // Load user profile from Firebase
+          // Refresh user stats to ensure activity count is accurate
+          try {
+            await firebaseService.refreshUserStats(user.uid);
+          } catch (refreshError) {
+            console.log('Initial stats refresh failed:', refreshError);
+          }
+          
+          // Load user profile from Firebase (now with accurate stats)
           const userProfile = await firebaseService.getUserProfile(user.uid);
           if (userProfile) {
             // Update Redux store with Firebase user profile data

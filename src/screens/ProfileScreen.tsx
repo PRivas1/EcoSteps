@@ -28,7 +28,14 @@ const ProfileScreen: React.FC = () => {
     
     setIsLoading(true);
     try {
-      // Load user profile from Firebase
+      // Refresh user stats to ensure accuracy with actual walk count
+      try {
+        await firebaseService.refreshUserStats(currentUser.uid);
+      } catch (refreshError) {
+        console.log('Stats refresh failed, continuing with existing data:', refreshError);
+      }
+      
+      // Load user profile from Firebase (now with refreshed stats)
       const profile = await firebaseService.getUserProfile(currentUser.uid);
       setFirebaseProfile(profile);
       
@@ -38,7 +45,7 @@ const ProfileScreen: React.FC = () => {
         setWalkHistory(history);
       } catch (historyError) {
         console.log('Walk history not available yet (index may be building):', historyError);
-        setWalkHistory([]); // Set empty array so UI doesn't break
+        setWalkHistory([]);
       }
     } catch (error) {
       console.error('Error loading user data:', error);

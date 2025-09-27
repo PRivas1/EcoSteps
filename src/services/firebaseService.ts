@@ -11,6 +11,7 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   collection,
   addDoc,
   query,
@@ -170,11 +171,14 @@ class FirebaseService {
     }
   }
 
-  // Walk History Management
+  // Walk History Management - User-specific subcollections
+  // Structure: users/{userId}/walkHistory/{walkId}
+  // This ensures each user's walk history is private and isolated
   async addWalkToHistory(walkData: Omit<WalkHistoryEntry, 'id' | 'createdAt'>): Promise<string> {
     try {
-      const walkHistoryRef = collection(firestore, 'WalkHistory');
-      const docRef = await addDoc(walkHistoryRef, {
+      // Create user-specific subcollection: users/{userId}/walkHistory
+      const userWalkHistoryRef = collection(firestore, 'users', walkData.userId, 'walkHistory');
+      const docRef = await addDoc(userWalkHistoryRef, {
         ...walkData,
         createdAt: serverTimestamp(),
       });
@@ -184,12 +188,13 @@ class FirebaseService {
         distance: walkData.distance,
         duration: walkData.duration,
         points: walkData.points,
+        userId: walkData.userId, // Include userId for analytics segmentation
       });
 
-      console.log('Walk added to history with ID:', docRef.id);
+      console.log(`Walk added to user ${walkData.userId} history with ID:`, docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error adding walk to history:', error);
+      console.error('Error adding walk to user history:', error);
       throw error;
     }
   }
@@ -199,11 +204,13 @@ class FirebaseService {
     limitCount: number = 10
   ): Promise<WalkHistoryEntry[]> {
     try {
-      const walkHistoryRef = collection(firestore, 'WalkHistory');
-      // Simplified query to avoid index requirement - just filter by userId
+      // Query user-specific subcollection: users/{userId}/walkHistory
+      const userWalkHistoryRef = collection(firestore, 'users', userId, 'walkHistory');
+      
+      // We can now use orderBy since we're querying a specific user's subcollection
       const q = query(
-        walkHistoryRef,
-        where('userId', '==', userId),
+        userWalkHistoryRef,
+        orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
 
@@ -222,14 +229,8 @@ class FirebaseService {
         } as WalkHistoryEntry);
       });
 
-      // Sort in memory by createdAt descending
-      walks.sort((a, b) => {
-        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      return walks.slice(0, limitCount);
+      console.log(`Retrieved ${walks.length} walks for user ${userId}`);
+      return walks;
     } catch (error) {
       console.error('Error getting user walk history:', error);
       // Return empty array instead of throwing to prevent app crashes
@@ -264,6 +265,52 @@ class FirebaseService {
       return stats;
     } catch (error) {
       console.error('Error getting user total stats:', error);
+      throw error;
+    }
+  }
+
+  // Delete a specific walk from user's history
+  async deleteUserWalk(userId: string, walkId: string): Promise<void> {
+    try {
+      const walkRef = doc(firestore, 'users', userId, 'walkHistory', walkId);
+      await deleteDoc(walkRef);
+      console.log(`Deleted walk ${walkId} for user ${userId}`);
+    } catch (error) {
+      console.error('Error deleting user walk:', error);
+      throw error;
+    }
+  }
+
+  // Get count of user's walks without fetching all data
+  async getUserWalkCount(userId: string): Promise<number> {
+    try {
+      const userWalkHistoryRef = collection(firestore, 'users', userId, 'walkHistory');
+      const querySnapshot = await getDocs(userWalkHistoryRef);
+      return querySnapshot.size;
+    } catch (error) {
+      console.error('Error getting user walk count:', error);
+      return 0;
+    }
+  }
+
+  // Refresh user profile stats based on actual walk history data
+  async refreshUserStats(userId: string): Promise<void> {
+    try {
+      const actualStats = await this.getUserTotalStats(userId);
+      const currentProfile = await this.getUserProfile(userId);
+      
+      if (currentProfile) {
+        await this.updateUserProfile(userId, {
+          totalPoints: actualStats.totalPoints,
+          activitiesCompleted: actualStats.totalWalks,
+          totalDistance: actualStats.totalDistance,
+          level: Math.floor(actualStats.totalPoints / 100) + 1,
+        });
+        
+        console.log(`Refreshed user ${userId} stats: ${actualStats.totalWalks} activities, ${actualStats.totalPoints} points`);
+      }
+    } catch (error) {
+      console.error('Error refreshing user stats:', error);
       throw error;
     }
   }
