@@ -14,6 +14,7 @@ import { setUserLocation } from '../store/slices/locationSlice';
 import LocationService from '../services/locationService';
 import LocalStorageService from '../services/localStorageService';
 import SyncService from '../services/syncService';
+import FirebaseService from '../services/firebaseService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Location, RoutePoint } from '../types';
 
@@ -29,15 +30,36 @@ const WalkScreen: React.FC = () => {
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const isLocationEnabled = useSelector((state: RootState) => (state as any).location?.isLocationEnabled || false);
+  
+  // Add Firebase profile state
+  const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
 
   const [locationService] = useState(() => LocationService.getInstance());
   const [localStorageService] = useState(() => LocalStorageService.getInstance());
   const [syncService] = useState(() => SyncService.getInstance());
+  const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
   const [currentDistance, setCurrentDistance] = useState(0);
   const [routePoints, setRoutePoints] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Load Firebase profile data
+  useEffect(() => {
+    const loadFirebaseProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        await firebaseService.refreshUserStats(currentUser.uid);
+        const profile = await firebaseService.getUserProfile(currentUser.uid);
+        setFirebaseProfile(profile);
+      } catch (error) {
+        console.error('WalkScreen: Error loading profile:', error);
+      }
+    };
+    
+    loadFirebaseProfile();
+  }, [currentUser, firebaseService]);
 
   // Timer effect for tracking time
   useEffect(() => {
@@ -134,18 +156,27 @@ const WalkScreen: React.FC = () => {
           const localId = await localStorageService.saveWalkLocally(walkData);
           console.log('Walk saved locally with ID:', localId);
           
-          // Trigger background sync
-          syncService.syncUnsyncedWalks();
-          
-        } catch (localError) {
-          console.error('Error saving walk locally:', localError);
-          Alert.alert(
-            'Save Error',
-            'Failed to save walk data. Please try again.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
+                        // Trigger background sync
+              syncService.syncUnsyncedWalks();
+
+              // Refresh Firebase profile after activity completion
+              try {
+                await firebaseService.refreshUserStats(currentUser.uid);
+                const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
+                setFirebaseProfile(updatedProfile);
+              } catch (profileError) {
+                console.error('Error refreshing profile after walk:', profileError);
+              }
+              
+            } catch (localError) {
+              console.error('Error saving walk locally:', localError);
+              Alert.alert(
+                'Save Error',
+                'Failed to save walk data. Please try again.',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
       }
 
       navigation.navigate('ActivityCompletion', {
@@ -274,10 +305,10 @@ const WalkScreen: React.FC = () => {
         <View style={styles.userStats}>
           <Text style={styles.userStatsTitle}>Your Progress</Text>
           <Text style={styles.userStatsText}>
-            Total Points: {userProfile?.totalPoints || 0} | Level: {userProfile?.level || 1}
+            Total Points: {(firebaseProfile || userProfile)?.totalPoints || 0} | Level: {(firebaseProfile || userProfile)?.level || 1}
           </Text>
           <Text style={styles.userStatsText}>
-            Activities: {userProfile?.activitiesCompleted || 0} | Distance: {(userProfile?.totalDistance || 0).toFixed(2)} km
+            Activities: {(firebaseProfile || userProfile)?.activitiesCompleted || 0} | Distance: {((firebaseProfile || userProfile)?.totalDistance || 0).toFixed(2)} km
           </Text>
         </View>
 

@@ -117,12 +117,7 @@ const ActivityCompletionScreen: React.FC = () => {
                 ~{(distance * 0.2).toFixed(1)} kg CO₂ saved
               </Text>
             </View>
-            <View style={styles.impactItem}>
-              <Ionicons name="fitness" size={20} color="#E74C3C" />
-              <Text style={styles.impactText}>
-                ~{Math.round(distance * 50)} calories burned
-              </Text>
-            </View>
+
           </View>
         </View>
 

@@ -1,0 +1,228 @@
+Station_ID,Station_Name,Latitude,Longitude,Address,Total_Docks,Has_Kiosk
+3004,Municipal Services Building,39.95378,-75.16374,1401 John F Kennedy Blvd,30,True
+3005,11th & Pine,39.945731,-75.160171,11th & Pine St,19,True
+3006,4th & Walnut,39.94759,-75.14811,4th & Walnut St,19,True
+3007,13th & Market,39.95254,-75.16238,13th & Market St,21,True
+3008,Temple University - TECH Center,39.981872,-75.155449,12th & Montgomery Ave,35,True
+3009,12th & Washington,39.938099,-75.16235,12th & Washington Ave,23,True
+3010,13th & Locust,39.94781,-75.16248,13th & Locust St,27,True
+3011,10th & Federal,39.93489,-75.16112,10th & Federal St,24,True
+3012,20th & Market,39.95325,-75.17333,20th & Market St,33,True
+3013,16th & Jackson,39.92723,-75.17144,16th & Jackson St,16,True
+3014,City Hall N Portal,39.95276,-75.16335,1400 John F Kennedy Blvd,22,True
+3015,19th & Lombard,39.94639,-75.17248,19th & Lombard St,19,True
+3016,21st & Winter,39.95855,-75.17399,21st & Winter St,18,True
+3017,11th & South,39.94318,-75.16016,11th & South St,19,True
+3018,University City Station,39.95473,-75.19131,3001 Market St,34,True
+3019,23rd & South,39.94435,-75.17935,23rd & South St,22,True
+3020,38th & Market,39.95663,-75.19835,38th & Market St,28,True
+3021,2nd & Market,39.95011,-75.14392,2nd & Market St,19,True
+3022,23rd & Fairmount,39.96644,-75.17599,23rd & Fairmount Ave,23,True
+3d23,30th Street Station East,39.95552,-75.18214,30th & Market St,23,True
+3024,24th & Wallace,39.96766,-75.17346,24th & Wallace St,16,True
+3025,Front & Dock,39.94747,-75.14248,Front & Dock St,19,True
+3026,16th & Race,39.95665,-75.16616,16th & Race St,22,True
+3027,33rd & Market,39.95624,-75.18925,33rd & Market St,24,True
+3028,Foglietta Plaza,39.94584,-75.14371,3 Dock St,22,True
+3029,20th & Spruce,39.94702,-75.17424,20th & Spruce St,16,True
+3030,Penn Museum,39.94973,-75.19472,3260 South St,22,True
+3031,Front & Girard,39.96541,-75.13897,Front & Girard Ave,19,True
+3032,Broad & South,39.94331,-75.16484,Broad & South St,19,True
+3033,40th & Spruce,39.95225,-75.20311,40th & Spruce St,22,True
+3034,22nd & Market,39.95361,-75.17642,22nd & Market St,24,True
+3035,18th & Callowhill,39.95995,-75.16898,18th & Callowhill St,21,True
+3036,8th & Market,39.95155,-75.15379,8th & Market St,27,True
+3037,Broad & Carpenter,39.93952,-75.16584,Broad & Carpenter St,19,True
+3038,15th & Chestnut,39.95142,-75.16503,15th & Chestnut St,26,True
+3039,24th & Fairmount,39.96644,-75.17723,24th & Fairmount Ave,19,True
+3040,15th & Spruce,39.94812,-75.16599,15th & Spruce St,33,True
+3041,Race & Devereaux,39.95353,-75.14343,200 N. Christopher Columbus Blvd,19,True
+3042,21st & Chestnut,39.95156,-75.17531,21st & Chestnut St,24,True
+3043,Broad & Race,39.95612,-75.16278,Broad & Race St,22,True
+3044,17th & Pine,39.94593,-75.16883,17th & Pine St,23,True
+3045,Broad & Fitzwater,39.94163,-75.16527,Broad & Fitzwater St,23,True
+3046,16th & Sansom,39.95078,-75.16723,16th & Sansom St,23,True
+3047,Rittenhouse Square,39.94932,-75.17122,18th & Walnut St,27,True
+3048,6th & Fairmount,39.96223,-75.14915,6th & Fairmount Ave,23,True
+3rd49,20th & Pennsylvania,39.96101,-75.17227,20th & Pennsylvania Ave,19,True
+3050,4th & Washington,39.93781,-75.1491,4th & Washington Ave,19,True
+3051,12th & Callowhill,39.95831,-75.1587,12th & Callowhill St,22,True
+3052,19th & Fairmount,39.96582,-75.16999,19th & Fairmount Ave,19,True
+3053,22nd & Pennsylvania,39.96213,-75.17462,22nd & Pennsylvania Ave,19,True
+3054,Spring Garden & Columbus,39.95996,-75.13994,Spring Garden & Columbus Blvd,19,True
+3055,Penn Treaty Park,39.96617,-75.13111,1341 N Delaware Ave,20,True
+3056,Frankford & Thompson,39.96788,-75.13322,Frankford & Thompson St,19,True
+3057,21st & Fitzwater,39.94129,-75.17585,21st & Fitzwater St,18,True
+3058,15th & Girard,39.97405,-75.16223,15th & Girard Ave,20,True
+3059,25th & Poplar,39.96913,-75.17726,25th & Poplar St,19,True
+3060,Schuylkill Banks & Walnut,39.94931,-75.18029,Schuylkill Banks & Walnut St,21,True
+3061,Belmont & Parkside,39.97545,-75.21319,Belmont & Parkside Ave,19,True
+3062,Horticulture Center,39.98001,-75.21142,100 N Horticultural Dr,19,True
+3063,Philadelphia Zoo,39.97316,-75.20232,3400 W Girard Ave,24,True
+3064,25th & Diamond,39.97967,-75.1755,25th & Diamond St,19,True
+3065,Please Touch Museum,39.97821,-75.20939,4231 Avenue of the Republic,24,True
+3066,16th & Fairmount,39.96551,-75.16439,16th & Fairmount Ave,23,True
+3067,29th & Girard,39.97311,-75.18376,29th & Girard Ave,19,True
+3068,Temple University - SAC,39.98001,-75.15939,13th & Diamond St,19,True
+3069,Broad & Cecil B. Moore,39.97711,-75.15949,Broad & Cecil B. Moore Ave,30,True
+3070,Broad & Oxford,39.97561,-75.15958,Broad & Oxford St,19,True
+3071,Drexel University,39.95669,-75.18641,34th & Lancaster Ave,23,True
+3072,Front & Washington,39.93741,-75.14321,Front & Washington Ave,23,True
+3073,Berks Station,39.97683,-75.1362,1900 N Front St,19,True
+3074,Frankford & Berks,39.97233,-75.1341,Frankford & Berks St,24,True
+-3075,41st & Lancaster,39.96191,-75.2033,41st & Lancaster Ave,19,True
+3076,8th & Christian,39.93922,-75.15655,8th & Christian St,19,True
+3077,PA Convention Center,39.95544,-75.15995,Broad & Arch St,26,True
+3078,36th & Sansom,39.95357,-75.19515,36th & Sansom St,20,True
+3079,34th & Spruce,39.95066,-75.19253,34th & Spruce St,22,True
+3080,43rd & Baltimore,39.95111,-75.21045,43rd & Baltimore Ave,19,True
+3081,37th & Lancaster,39.95856,-75.19637,37th & Lancaster Ave,19,True
+3082,Spring Garden Station,39.96105,-75.15243,Broad & Spring Garden St,31,True
+3083,7th & Packer,39.91136,-75.1704,7th & Packer Ave,19,True
+3084,Citizens Bank Park,39.90566,-75.16738,1 Citizens Bank Way,19,True
+3085,Lincoln Financial Field,39.90117,-75.16723,1 Lincoln Financial Field Way,19,True
+3086,Wells Fargo Center,39.90124,-75.17183,3601 S Broad St,19,True
+3087,MFL - 46th & Market,39.95995,-75.21271,46th & Market St,19,True
+3088,8th & Berks,39.97746,-75.14937,8th & Berks St,19,True
+3-89,2nd & Germantown,39.96781,-75.13963,2nd & Germantown Ave,19,True
+3090,13th & Montgomery,39.98144,-75.15783,13th & Montgomery Ave,18,True
+3091,Dilworth Park,39.95294,-75.16393,1 S 15th St,31,True
+3092,52nd & Market,39.96095,-75.22557,52nd & Market St,23,True
+3093,Clark Park,39.94966,-75.20815,43rd & Chester Ave,19,True
+3094,30th Street Station West,39.95593,-75.18349,30th & JFK Blvd,19,True
+3095,20th & Federal,39.93444,-75.17646,20th & Federal St,19,True
+3096,Broad & Passyunk,39.93043,-75.16853,Broad & Passyunk Ave,19,True
+3097,Columbus & Penn's Landing,39.94917,-75.14088,101 S Christopher Columbus Blvd,22,True
+3098,17th & Washington,39.93836,-75.17036,17th & Washington Ave,19,True
+3099,Broad & Tasker,39.92982,-75.16683,Broad & Tasker St,19,True
+3100,22nd & Cecil B Moore,39.97657,-75.17124,22nd & Cecil B Moore Ave,19,True
+3101,Passyunk & Tasker,39.92953,-75.16104,Passyunk & Tasker St,19,True
+3102,15th & Market,39.95232,-75.16525,15th & Market St,24,True
+3103,19th & JFK,39.95473,-75.17122,19th & JFK Blvd,22,True
+3104,17th & Girard,39.9739,-75.16551,17th & Girard Ave,19,True
+3105,MLK Drive & Sweet Briar,39.97486,-75.19728,MLK Drive & Sweet Briar Dr,19,True
+3106,Bok,39.93099,-75.16117,8th & Mifflin St,19,True
+3107,Girard Station,39.97022,-75.1359,Front & Girard Ave,19,True
+3108,Penn Cycle Center,39.95208,-75.19253,3900 Spruce St,19,True
+3109,Spring Garden & 2nd,39.96105,-75.14188,Spring Garden & 2nd St,19,True
+3110,6th & Washington,39.93757,-75.1525,6th & Washington Ave,19,True
+3111,CHOP,39.94784,-75.1906,3401 Civic Center Blvd,23,True
+3112,48th & Baltimore,39.95029,-75.21908,48th & Baltimore Ave,19,True
+-3113,Broad & Snyder,39.92244,-75.16781,Broad & Snyder Ave,22,True
+3114,Fishtown Recreation,39.96783,-75.12741,1202 E Montgomery Ave,19,True
+3115,22nd & York,39.98634,-75.16857,22nd & York St,19,True
+3116,Norris Square,39.9804,-75.13848,2nd & Susquehanna Ave,19,True
+3117,Front & Palmer,39.97052,-75.13117,1101 N Front St,19,True
+3118,22nd & Tasker,39.92902,-75.17882,22nd & Tasker St,19,True
+3119,7th & Spring Garden,39.96068,-75.15082,7th & Spring Garden St,19,True
+3120,Haddington Library,39.96695,-75.24151,446 N 63rd St,19,True
+3121,The Discovery Center,39.97541,-75.18788,3401 Reservoir Dr,19,True
+3122,34th & Mantua,39.96577,-75.19323,34th & Mantua Ave,19,True
+3123,Huntingdon Station,39.9922,-75.13289,2500 N Front St,19,True
+3124,19th & Arch,39.95568,-75.17094,19th & Arch St,23,True
+3125,12th & Federal,39.93498,-75.16335,12th & Federal St,19,True
+3126,20th & Christian,39.9406,-75.17424,20th & Christian St,19,True
+3127,10th & Master,39.9739,-75.15286,10th & Master St,19,True
+3128,10th & Spring Garden,39.96024,-75.15509,10th & Spring Garden St,19,True
+3129,Front & Norris,39.97931,-75.13524,Front & Norris St,19,True
+3130,13th & Federal,39.93506,-75.16458,13th & Federal St,19,True
+3131,Schuylkill Banks & Race St,39.95679,-75.17646,Schuylkill Banks & Race St,19,True
+3132,15th & South,39.94361,-75.16664,15th & South St,19,True
+3133,18th & Washington,39.93853,-75.17145,18th & Washington Ave,19,True
+3-134,2nd & Christian,39.93881,-75.14589,2nd & Christian St,19,True
+3135,26th & Master,39.97334,-75.17888,26th & Master St,19,True
+3136,8th & Diamond,39.97992,-75.15178,8th & Diamond St,19,True
+3137,Philadelphia Mills,40.08182,-75.00696,1455 Franklin Mills Cir,19,True
+3138,Carousel House,39.97864,-75.21334,4300 Avenue of the Republic,19,True
+3139,11th & Cecil B Moore,39.9767,-75.15343,11th & Cecil B Moore Ave,19,True
+3140,29th & Dauphin,39.98808,-75.17904,29th & Dauphin St,19,True
+3141,40th & Parrish,39.96583,-75.20235,40th & Parrish St,19,True
+3142,38th & Powelton,39.96041,-75.19794,38th & Powelton Ave,19,True
+3143,44th & Haverford,39.96349,-75.21051,44th & Haverford Ave,19,True
+3144,Overbrook Station,39.97686,-75.24729,2100 N 63rd St,19,True
+3145,2nd & Allegheny,39.99971,-75.12788,2nd & Allegheny Ave,19,True
+3146,Dauphin & Sedgley,39.9904,-75.15049,2424 N 11th St,19,True
+3147,7th & Lehigh,40.00007,-75.14441,7th & Lehigh Ave,19,True
+3148,4th & Lehigh,40.00109,-75.13845,4th & Lehigh Ave,19,True
+3149,Front & Lehigh,40.0022,-75.13289,Front & Lehigh Ave,19,True
+3150,Kensington & Lehigh,40.00192,-75.11666,Kensington & Lehigh Ave,19,True
+3151,Boudinot & Hart,39.99849,-75.11979,2001 E Hart Ln,19,True
+3152,B & Lippincott,39.99407,-75.1189,2558 B St,19,True
+3153,B & Westmoreland,40.00936,-75.11306,3301 B St,19,True
+3154,Kensington & Tioga,40.01083,-75.11146,Kensington & Tioga St,19,True
+3155,Allegheny Station,39.99896,-75.11342,Kensington & Allegheny Ave,19,True
+3156,22nd & Cambria,39.9961,-75.16541,22nd & Cambria St,19,True
+3157,17th & Lehigh,39.99925,-75.1611,17th & Lehigh Ave,19,True
+3158,16th & Venango,40.00768,-75.15814,16th & Venango St,19,True
+3159,Broad & Erie,40.01166,-75.1542,Broad & Erie Ave,19,True
+3160,Tioga Station,40.01188,-75.16458,2000 W Tioga St,19,True
+3161,22nd & Sedgley,39.99961,-75.16858,22nd & Sedgley Ave,19,True
+3162,29th & Chalmers,40.00192,-75.18029,29th & Chalmers Ave,19,True
+3163,33rd & Diamond,39.98064,-75.18739,33rd & Diamond St,19,True
+3164,Wynnefield & Bryn Mawr,39.98592,-75.22851,Wynnefield & Bryn Mawr Ave,19,True
+3165,ParkWest Town Center,39.9723,-75.22634,1575 N 52nd St,19,True
+3166,Viola Bike Skills Park,39.97541,-75.22159,4300 Viola St,19,True
+3167,49th & Parkside,39.97341,-75.22019,49th & Parkside Ave,19,True
+3168,44th & Girard,39.97166,-75.2096,44th & Girard Ave,19,True
+3169,46th & Lancaster,39.96472,-75.21482,46th & Lancaster Ave,19,True
+3170,49th & Aspen,39.96738,-75.2198,49th & Aspen St,19,True
+3171,53rd & Wyalusing,39.97034,-75.22744,53rd & Wyalusing Ave,19,True
+3172,55th & Vine,39.96547,-75.23126,55th & Vine St,19,True
+3173,60th & Market,39.96131,-75.23961,60th & Market St,19,True
+3174,56th & Chestnut,39.9576,-75.23351,56th & Chestnut St,19,True
+3175,52nd & Larchwood,39.95475,-75.22616,52nd & Larchwood Ave,19,True
+3176,49th & Catharine,39.94723,-75.22143,49th & Catharine St,19,True
+3177,Malcolm X Park,39.9543,-75.22591,51st & Pine St,19,True
+3178,St. Bernard & Warrington,39.94611,-75.21852,49th & Warrington Ave,19,True
+3179,48th & Woodland,39.94363,-75.21731,48th & Woodland Ave,19,True
+3180,44th & Woodland,39.94491,-75.21106,44th & Woodland Ave,19,True
+3181,8th & Morris,39.93202,-75.15839,8th & Morris St,19,True
+3182,10th & Wharton,39.93665,-75.16003,10th & Wharton St,19,True
+3183,16th & Dickinson,39.9329,-75.16982,16th & Dickinson St,19,True
+3184,20th & Point Breeze,39.9327,-75.17835,20th & Point Breeze Ave,19,True
+3185,25th & Snyder,39.92209,-75.18432,25th & Snyder Ave,19,True
+3186,Point Breeze & Tasker,39.9292,-75.18042,Point Breeze & Tasker St,19,True
+3187,Grays Ferry & Pemberton,39.94132,-75.19325,29th & Pemberton St,19,True
+3188,30th & Grays Ferry,39.9405,-75.18873,30th & Grays Ferry Ave,19,True
+3189,28th & Reed,39.93635,-75.18466,28th & Reed St,19,True
+3190,Point Breeze & Reed,39.93589,-75.18241,Point Breeze & Reed St,19,True
+3191,24th & Federal,39.93409,-75.18246,24th & Federal St,19,True
+3192,26th & Annin,39.93222,-75.18563,26th & Annin St,19,True
+3193,31st & Reed,39.93605,-75.18945,31st & Reed St,19,True
+3194,33rd & Cecil B Moore,39.97602,-75.18884,33rd & Cecil B Moore Ave,19,True
+3195,Bartram's Garden,39.93237,-75.21327,54th & Lindbergh Blvd,19,True
+3196,57th & Grays,39.93339,-75.22891,57th & Grays Ave,19,True
+3197,58th & Chester,39.94002,-75.23438,58th & Chester Ave,19,True
+3198,Paschall & 65th,39.93414,-75.23696,Paschall & 65th St,19,True
+3199,61st & Baltimore,39.9482,-75.24269,61st & Baltimore Ave,19,True
+3200,60th & Chancellor,39.95777,-75.24128,60th & Chancellor St,19,True
+3201,Woodbine & 70th,39.97232,-75.25992,70th & Woodbine Ave,19,True
+3202,Havertown & Lansdowne,39.98031,-75.26354,Havertown & Lansdowne Ave,19,True
+3203,67th & Lansdowne,39.97825,-75.25367,67th & Lansdowne Ave,19,True
+3204,Broad & Germantown,39.98586,-75.1583,Broad & Germantown Ave,19,True
+3205,Vernon Park,40.03816,-75.18663,5800 Germantown Ave,19,True
+3206,Cliveden Park,40.04618,-75.18835,Chew & Cliveden St,19,True
+3207,21st & Godfrey,40.05269,-75.14769,21st & Godfrey Ave,19,True
+3208,10th & Olney,40.04945,-75.12781,10th & Olney Ave,19,True
+3209,Broad & Tabor,40.03437,-75.14444,Broad & Tabor Rd,19,True
+3210,5th & Tabor,40.03554,-75.12356,5th & Tabor Rd,19,True
+3211,Olney Transportation Center,40.03965,-75.13284,Broad & Olney Ave,19,True
+3212,Fern Rock Transportation Center,40.05706,-75.14661,11th & Nedro Ave,19,True
+3213,Tacony Creek Park,40.02497,-75.10915,I & Ramona Ave,19,True
+3214,C and Westmoreland,40.00898,-75.10928,C & Westmoreland St,19,True
+3215,Kensington & Somerset,39.99269,-75.12133,Kensington & Somerset St,19,True
+3216,40th & Filbert,39.95874,-75.20232,40th & Filbert St,19,True
+3217,19th & Washington,39.93872,-75.17265,19th & Washington Ave,19,True
+3218,8th & South,39.94303,-75.15486,8th & South St,19,True
+3219,6th & Race,39.9529,-75.15049,6th & Race St,19,True
+3220,18th & Jackson,39.92742,-75.17387,18th & Jackson St,19,True
+3221,Broad & Federal,39.93489,-75.16641,Broad & Federal St,19,True
+3222,23rd & Lombard,39.94611,-75.17823,23rd & Lombard St,19,True
+3223,6th & Reed,39.9329,-75.1539,6th & Reed St,19,True
+3224,9th & Arch,39.9535,-75.15555,9th & Arch St,23,True
+3225,Moyamensing & Sigel,39.92484,-75.1648,Moyamensing & Sigel St,19,True
+3226,Passyunk & Snyder,39.92244,-75.1654,Passyuno & Snyder Ave,19,True
+3227,Broad & Susquehanna,39.98687,-75.15802,Broad & Susquehanna Ave,19,True
+3228,Woodland & 58th,39.93774,-75.23199,Woodland & 58th St,19,True
+3229,The Navy Yard,39.89408,-75.1729,Rouse & Intrepid Ave,19,True
+3230,2nd & Race,39.95254,-75.14292,2nd & Race St,19,True

@@ -66,16 +66,17 @@ const rewardsSlice = createSlice({
     redeemReward: (state, action: PayloadAction<string>) => {
       const rewardIndex = state.availableRewards.findIndex(reward => reward.id === action.payload);
       if (rewardIndex !== -1) {
-        const reward = state.availableRewards[rewardIndex];
+        // Mark the reward as redeemed in the available rewards list
+        state.availableRewards[rewardIndex].isRedeemed = true;
+        
+        // Also add to redeemed rewards list with additional info
         const redeemedReward = {
-          ...reward,
+          ...state.availableRewards[rewardIndex],
           isRedeemed: true,
           redeemedAt: new Date(),
-          qrCode: `QR-${reward.id}-${Date.now()}`, // Mock QR code
+          qrCode: `QR-${state.availableRewards[rewardIndex].id}-${Date.now()}`, // Mock QR code
         };
         state.redeemedRewards.push(redeemedReward);
-        // Keep the reward available for future redemption
-        // state.availableRewards.splice(rewardIndex, 1);
       }
     },
     addReward: (state, action: PayloadAction<Omit<Reward, 'id' | 'isRedeemed'>>) => {

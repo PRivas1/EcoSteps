@@ -43,6 +43,15 @@ interface RouteData {
   coordinates: Array<[number, number]>; // decoded coordinates
 }
 
+interface TransitStop {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  type: 'subway' | 'train' | 'bus' | 'tram' | 'metro';
+  distance?: number; // distance from selected point in meters
+}
+
 const TransitScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<TransitScreenNavigationProp>();
@@ -71,6 +80,11 @@ const TransitScreen: React.FC = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+
+  // Transit stops states
+  const [nearbyStartStops, setNearbyStartStops] = useState<TransitStop[]>([]);
+  const [nearbyEndStops, setNearbyEndStops] = useState<TransitStop[]>([]);
+  const [isLoadingStops, setIsLoadingStops] = useState(false);
 
   // Services
   const [locationService] = useState(() => LocationService.getInstance());
@@ -134,30 +148,28 @@ const TransitScreen: React.FC = () => {
     }
   };
 
-  const selectLocation = (suggestion: LocationSuggestion, isStart: boolean) => {
-    const location = {
-      lat: parseFloat(suggestion.lat),
-      lng: parseFloat(suggestion.lon),
-    };
+  const selectLocation = async (suggestion: LocationSuggestion, isStart: boolean) => {
+    const lat = parseFloat(suggestion.lat);
+    const lng = parseFloat(suggestion.lon);
 
+    // Hide suggestions first
     if (isStart) {
-      setStartLocation(location);
-      setStartInput(suggestion.display_name);
       setShowStartSuggestions(false);
     } else {
-      setDestinationLocation(location);
-      setDestinationInput(suggestion.display_name);
       setShowDestinationSuggestions(false);
     }
 
-    // Update map region to show both points
-    if (startLocation || destinationLocation) {
+    // Snap the selected location to nearest transit stop
+    const snappedLocation = await snapToNearestStop(lat, lng, isStart);
+    
+    if (snappedLocation && startLocation && destinationLocation) {
+      // Update map region to show both points
       const otherLocation = isStart ? destinationLocation : startLocation;
       if (otherLocation) {
-        const midLat = (location.lat + otherLocation.lat) / 2;
-        const midLng = (location.lng + otherLocation.lng) / 2;
-        const deltaLat = Math.abs(location.lat - otherLocation.lat) * 1.5;
-        const deltaLng = Math.abs(location.lng - otherLocation.lng) * 1.5;
+        const midLat = (snappedLocation.lat + otherLocation.lat) / 2;
+        const midLng = (snappedLocation.lng + otherLocation.lng) / 2;
+        const deltaLat = Math.abs(snappedLocation.lat - otherLocation.lat) * 1.5;
+        const deltaLng = Math.abs(snappedLocation.lng - otherLocation.lng) * 1.5;
 
         setMapRegion({
           latitude: midLat,
@@ -166,6 +178,149 @@ const TransitScreen: React.FC = () => {
           longitudeDelta: Math.max(deltaLng, 0.01),
         });
       }
+    }
+  };
+
+  // Find nearby transit stops using Overpass API
+  const findNearbyTransitStops = async (lat: number, lng: number, radius: number = 1000): Promise<TransitStop[]> => {
+    try {
+      // Overpass API query for public transport stops
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          node["public_transport"="stop_position"](around:${radius},${lat},${lng});
+          node["railway"="station"](around:${radius},${lat},${lng});
+          node["railway"="subway_entrance"](around:${radius},${lat},${lng});
+          node["highway"="bus_stop"](around:${radius},${lat},${lng});
+        );
+        out geom;
+      `;
+
+      const response = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+      });
+
+      const data = await response.json();
+      
+      if (!data.elements) {
+        return [];
+      }
+
+      const stops: TransitStop[] = data.elements.map((element: any) => {
+        const name = element.tags?.name || element.tags?.ref || 'Transit Stop';
+        let type: TransitStop['type'] = 'bus'; // default
+        
+        // Determine stop type based on tags
+        if (element.tags?.railway === 'station') {
+          type = 'train';
+        } else if (element.tags?.railway === 'subway_entrance' || element.tags?.station === 'subway') {
+          type = 'subway';
+        } else if (element.tags?.highway === 'bus_stop') {
+          type = 'bus';
+        } else if (element.tags?.railway === 'tram_stop') {
+          type = 'tram';
+        }
+
+        // Calculate distance from selected point
+        const distance = calculateDistance(lat, lng, element.lat, element.lon);
+
+        return {
+          id: element.id.toString(),
+          name,
+          lat: element.lat,
+          lng: element.lon,
+          type,
+          distance,
+        };
+      });
+
+      // Sort by distance and return closest 5
+      return stops
+        .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+        .slice(0, 5);
+
+    } catch (error) {
+      console.error('Error finding transit stops:', error);
+      return [];
+    }
+  };
+
+  // Calculate distance between two points in meters
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+  };
+
+  // Snap location to nearest transit stop
+  const snapToNearestStop = async (lat: number, lng: number, isStart: boolean) => {
+    setIsLoadingStops(true);
+    try {
+      const stops = await findNearbyTransitStops(lat, lng);
+      
+      if (stops.length > 0) {
+        const nearestStop = stops[0];
+        const snappedLocation = { lat: nearestStop.lat, lng: nearestStop.lng };
+        
+        if (isStart) {
+          setStartLocation(snappedLocation);
+          setStartInput(nearestStop.name);
+          setNearbyStartStops(stops);
+        } else {
+          setDestinationLocation(snappedLocation);
+          setDestinationInput(nearestStop.name);
+          setNearbyEndStops(stops);
+        }
+
+        console.log(`Snapped to ${nearestStop.type} stop: ${nearestStop.name} (${nearestStop.distance?.toFixed(0)}m away)`);
+        
+        // Update map region to show the snapped location
+        setMapRegion({
+          latitude: nearestStop.lat,
+          longitude: nearestStop.lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+
+        return snappedLocation;
+      } else {
+        // No transit stops found, use original location
+        const location = { lat, lng };
+        if (isStart) {
+          setStartLocation(location);
+          setStartInput(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        } else {
+          setDestinationLocation(location);
+          setDestinationInput(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+        
+        Alert.alert(
+          'No Transit Stops Found',
+          'No public transit stops found nearby. Using your selected location instead.',
+          [{ text: 'OK' }]
+        );
+        
+        return location;
+      }
+    } catch (error) {
+      console.error('Error snapping to transit stop:', error);
+      Alert.alert('Error', 'Failed to find nearby transit stops. Please try again.');
+      return null;
+    } finally {
+      setIsLoadingStops(false);
     }
   };
 
@@ -197,22 +352,22 @@ const TransitScreen: React.FC = () => {
     }
   };
 
-  const handleMapPress = (event: any) => {
+  const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
     
     if (!startLocation) {
-      setStartLocation({ lat: latitude, lng: longitude });
-      setStartInput(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      // Snap to nearest transit stop for start location
+      await snapToNearestStop(latitude, longitude, true);
     } else if (!destinationLocation) {
-      setDestinationLocation({ lat: latitude, lng: longitude });
-      setDestinationInput(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      // Snap to nearest transit stop for destination
+      await snapToNearestStop(latitude, longitude, false);
     } else {
       // Reset and set as new start location
-      setStartLocation({ lat: latitude, lng: longitude });
       setDestinationLocation(null);
-      setStartInput(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       setDestinationInput('');
       setRouteData(null);
+      setNearbyEndStops([]);
+      await snapToNearestStop(latitude, longitude, true);
     }
   };
 
@@ -224,6 +379,8 @@ const TransitScreen: React.FC = () => {
     setRouteData(null);
     setShowStartSuggestions(false);
     setShowDestinationSuggestions(false);
+    setNearbyStartStops([]);
+    setNearbyEndStops([]);
   };
 
   const confirmTrip = async () => {
@@ -251,7 +408,7 @@ const TransitScreen: React.FC = () => {
           longitude: destinationLocation.lng,
           address: destinationInput,
         } : undefined,
-        routeType: 'bus' as const, // Default to bus for public transit
+        routeType: nearbyStartStops[0]?.type || 'bus', // Use the type of the selected transit stop
         transitMode: 'transit' as const,
       };
 
@@ -392,28 +549,69 @@ const TransitScreen: React.FC = () => {
           showsUserLocation={true}
           showsMyLocationButton={true}
         >
+          {/* Start Location - Transit Stop */}
           {startLocation && (
             <Marker
               coordinate={{
                 latitude: startLocation.lat,
                 longitude: startLocation.lng,
               }}
-              title="Start"
+              title="Start Station"
+              description={startInput}
               pinColor="#27AE60"
             />
           )}
           
+          {/* Destination Location - Transit Stop */}
           {destinationLocation && (
             <Marker
               coordinate={{
                 latitude: destinationLocation.lat,
                 longitude: destinationLocation.lng,
               }}
-              title="Destination"
+              title="Destination Station"
+              description={destinationInput}
               pinColor="#E74C3C"
             />
           )}
 
+          {/* Nearby Start Stops (alternative options) */}
+          {nearbyStartStops.slice(1).map((stop) => (
+            <Marker
+              key={`start-${stop.id}`}
+              coordinate={{
+                latitude: stop.lat,
+                longitude: stop.lng,
+              }}
+              title={stop.name}
+              description={`${stop.type} • ${stop.distance?.toFixed(0)}m away`}
+              pinColor="#A8E6CF"
+              onPress={() => {
+                setStartLocation({ lat: stop.lat, lng: stop.lng });
+                setStartInput(stop.name);
+              }}
+            />
+          ))}
+
+          {/* Nearby End Stops (alternative options) */}
+          {nearbyEndStops.slice(1).map((stop) => (
+            <Marker
+              key={`end-${stop.id}`}
+              coordinate={{
+                latitude: stop.lat,
+                longitude: stop.lng,
+              }}
+              title={stop.name}
+              description={`${stop.type} • ${stop.distance?.toFixed(0)}m away`}
+              pinColor="#FFB6C1"
+              onPress={() => {
+                setDestinationLocation({ lat: stop.lat, lng: stop.lng });
+                setDestinationInput(stop.name);
+              }}
+            />
+          ))}
+
+          {/* Route Polyline */}
           {routeData && routeData.coordinates && (
             <Polyline
               coordinates={routeData.coordinates.map(([lat, lng]) => ({
@@ -427,11 +625,13 @@ const TransitScreen: React.FC = () => {
           )}
         </MapView>
 
-        {/* Loading indicator */}
-        {isLoadingRoute && (
+        {/* Loading indicators */}
+        {(isLoadingRoute || isLoadingStops) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#4ECDC4" />
-            <Text style={styles.loadingText}>Calculating route...</Text>
+            <Text style={styles.loadingText}>
+              {isLoadingStops ? 'Finding transit stops...' : 'Calculating route...'}
+            </Text>
           </View>
         )}
       </View>
@@ -475,7 +675,19 @@ const TransitScreen: React.FC = () => {
       {!startLocation && !destinationLocation && (
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsText}>
-            🗺️ Tap on the map or search to set your start and destination
+            🚏 Tap on the map or search to find your nearest transit stops
+          </Text>
+          <Text style={styles.instructionsSubtext}>
+            Locations will automatically snap to nearby bus/train/subway stations
+          </Text>
+        </View>
+      )}
+
+      {/* Transit Stop Info */}
+      {(nearbyStartStops.length > 0 || nearbyEndStops.length > 0) && (
+        <View style={styles.transitInfoContainer}>
+          <Text style={styles.transitInfoText}>
+            🎯 Snapped to nearest transit stops • Tap other markers to switch
           </Text>
         </View>
       )}
@@ -637,6 +849,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2C3E50',
     textAlign: 'center',
+    marginBottom: 4,
+  },
+  instructionsSubtext: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    textAlign: 'center',
+  },
+  transitInfoContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(76, 217, 196, 0.9)',
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center',
+  },
+  transitInfoText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
 

@@ -2,7 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -36,6 +37,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
 
 const MainTabs = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -56,7 +59,11 @@ const MainTabs = () => {
         },
         tabBarActiveTintColor: '#4ECDC4',
         tabBarInactiveTintColor: '#95A5A6',
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          ...styles.tabBar,
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 10, 5) : 5,
+          height: Platform.OS === 'ios' ? 60 + Math.max(insets.bottom - 10, 0) : 60,
+        },
         headerStyle: styles.header,
         headerTintColor: '#2C3E50',
         headerTitleStyle: styles.headerTitle,
@@ -147,9 +154,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E8E8E8',
-    paddingBottom: 5,
-    paddingTop: 5,
-    height: 60,
+    paddingTop: 8,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   header: {
     backgroundColor: '#FFFFFF',

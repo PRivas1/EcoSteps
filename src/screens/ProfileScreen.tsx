@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootState, AppDispatch } from '../store';
 import { signOutUser } from '../store/slices/authSlice';
-import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry } from '../services/firebaseService';
+import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryEntry } from '../services/firebaseService';
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -16,6 +17,7 @@ const ProfileScreen: React.FC = () => {
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [walkHistory, setWalkHistory] = useState<WalkHistoryEntry[]>([]);
   const [transitHistory, setTransitHistory] = useState<TransitHistoryEntry[]>([]);
+  const [cyclingHistory, setCyclingHistory] = useState<CyclingHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
@@ -23,6 +25,13 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     loadUserData();
   }, [currentUser]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [currentUser])
+  );
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -40,18 +49,21 @@ const ProfileScreen: React.FC = () => {
       const profile = await firebaseService.getUserProfile(currentUser.uid);
       setFirebaseProfile(profile);
       
-      // Load walk and transit history (with error handling for index issues)
+      // Load walk, transit, and cycling history (with error handling for index issues)
       try {
-        const [walkHist, transitHist] = await Promise.all([
+        const [walkHist, transitHist, cyclingHist] = await Promise.all([
           firebaseService.getUserWalkHistory(currentUser.uid, 10),
-          firebaseService.getUserTransitHistory(currentUser.uid, 10)
+          firebaseService.getUserTransitHistory(currentUser.uid, 10),
+          firebaseService.getUserCyclingHistory(currentUser.uid, 10)
         ]);
         setWalkHistory(walkHist);
         setTransitHistory(transitHist);
+        setCyclingHistory(cyclingHist);
       } catch (historyError) {
         console.log('Activity history not available yet (index may be building):', historyError);
         setWalkHistory([]);
         setTransitHistory([]);
+        setCyclingHistory([]);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -156,7 +168,7 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.statCard}>
               <Ionicons name="map" size={32} color="#E74C3C" />
               <Text style={styles.statNumber}>{(profileData?.totalDistance || 0).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>km Walked</Text>
+              <Text style={styles.statLabel}>Total km</Text>
             </View>
           </View>
         </View>
@@ -174,30 +186,38 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading activities...</Text>
             </View>
-          ) : (walkHistory.length > 0 || transitHistory.length > 0) ? (
-            (() => {
-              // Combine and sort activities by date (latest first)
-              const allActivities = [
-                ...walkHistory.map(walk => ({ ...walk, type: 'walk' as const })),
-                ...transitHistory.map(transit => ({ ...transit, type: 'transit' as const }))
-              ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            ) : (walkHistory.length > 0 || transitHistory.length > 0 || cyclingHistory.length > 0) ? (
+    (() => {
+      // Combine and sort activities by date (latest first)
+      const allActivities = [
+        ...walkHistory.map(walk => ({ ...walk, type: 'walk' as const })),
+        ...transitHistory.map(transit => ({ ...transit, type: 'transit' as const })),
+        ...cyclingHistory.map(cycling => ({ ...cycling, type: 'cycling' as const }))
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-              return allActivities.map((activity) => (
-                <View key={`${activity.type}-${activity.id}`} style={styles.walkCard}>
-                  <View style={styles.walkHeader}>
-                    <View style={styles.walkIcon}>
-                      <Ionicons 
-                        name={activity.type === 'walk' ? 'walk' : 'bus'} 
-                        size={24} 
-                        color={activity.type === 'walk' ? '#4ECDC4' : '#E74C3C'} 
-                      />
-                    </View>
-                    <View style={styles.walkInfo}>
-                      <Text style={styles.walkDate}>{formatDate(activity.createdAt)}</Text>
-                      <Text style={styles.walkTime}>
-                        {activity.type === 'walk' ? 'Walking' : 'Public Transit'} • {formatDuration(activity.duration)}
-                      </Text>
-                    </View>
+                              return allActivities.map((activity, index) => (
+        <View key={`${activity.type}-${activity.id}-${index}`} style={styles.walkCard}>
+              <View style={styles.walkHeader}>
+                <View style={styles.walkIcon}>
+                  <Ionicons 
+                    name={
+                      activity.type === 'walk' ? 'walk' : 
+                      activity.type === 'cycling' ? 'bicycle' : 'bus'
+                    } 
+                    size={24} 
+                    color={
+                      activity.type === 'walk' ? '#4ECDC4' : 
+                      activity.type === 'cycling' ? '#FFD93D' : '#E74C3C'
+                    } 
+                  />
+                </View>
+                <View style={styles.walkInfo}>
+                  <Text style={styles.walkDate}>{formatDate(activity.createdAt)}</Text>
+                  <Text style={styles.walkTime}>
+                    {activity.type === 'walk' ? 'Walking' : 
+                     activity.type === 'cycling' ? 'Cycling' : 'Public Transit'} • {formatDuration(activity.duration)}
+                  </Text>
+                </View>
                     <View style={styles.walkStats}>
                       <Text style={styles.walkDistance}>{activity.distance.toFixed(2)} km</Text>
                       <Text style={styles.walkPoints}>+{activity.points} pts</Text>

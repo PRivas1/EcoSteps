@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -14,46 +15,92 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { redeemReward } from '../store/slices/rewardsSlice';
 import { spendPoints } from '../store/slices/userSlice';
+import FirebaseService from '../services/firebaseService';
 
 const RewardsScreen: React.FC = () => {
   const dispatch = useDispatch();
   const userProfile = useSelector((state: RootState) => state.user.profile);
-  // Temporarily using empty arrays
-  const availableRewards: any[] = [];
-  const redeemedRewards: any[] = [];
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
+  const [firebaseRedeemedRewards, setFirebaseRedeemedRewards] = useState<any[]>([]);
+  const [firebaseService] = useState(() => FirebaseService.getInstance());
+  
+  // Use actual Redux state for rewards
+  const availableRewards = useSelector((state: RootState) => state.rewards.availableRewards);
+  const redeemedRewards = useSelector((state: RootState) => state.rewards.redeemedRewards);
 
-  const mockRewards = [
-    {
-      id: '1',
-      title: '5% Off Groceries',
-      description: 'Get 5% discount at participating supermarkets',
-      pointsCost: 100,
-      category: 'supermarket',
-      discountPercentage: 5,
-    },
-    {
-      id: '2',
-      title: '10% Off Public Transport',
-      description: 'Save 10% on your next bus or train ticket',
-      pointsCost: 80,
-      category: 'transport',
-      discountPercentage: 10,
-    },
-    {
-      id: '3',
-      title: 'Free Coffee',
-      description: 'Enjoy a free coffee at participating cafes',
-      pointsCost: 50,
-      category: 'food',
-      discountPercentage: 100,
-    },
-  ];
+  // Load fresh profile data from Firebase when component mounts or user changes
+  useEffect(() => {
+    const loadFirebaseProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Refresh stats to ensure we have the latest data
+        await firebaseService.refreshUserStats(currentUser.uid);
+        
+        // Get the updated profile
+        const profile = await firebaseService.getUserProfile(currentUser.uid);
+        setFirebaseProfile(profile);
+        console.log('RewardsScreen: Loaded fresh profile data:', profile);
 
-  const handleRedeemReward = (reward: any) => {
-    if (!userProfile || userProfile.totalPoints < reward.pointsCost) {
+        // Load user's redeemed rewards from Firebase
+        const redeemedRewards = await firebaseService.getUserRedeemedRewards(currentUser.uid);
+        setFirebaseRedeemedRewards(redeemedRewards);
+      } catch (error) {
+        console.error('RewardsScreen: Error loading profile:', error);
+      }
+    };
+    
+    loadFirebaseProfile();
+  }, [currentUser, firebaseService]);
+
+  // Refresh profile when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshProfile = async () => {
+        if (!currentUser) return;
+        
+        try {
+          await firebaseService.refreshUserStats(currentUser.uid);
+          const profile = await firebaseService.getUserProfile(currentUser.uid);
+          setFirebaseProfile(profile);
+          console.log('RewardsScreen: Refreshed profile on focus');
+
+          // Refresh redeemed rewards
+          const redeemedRewards = await firebaseService.getUserRedeemedRewards(currentUser.uid);
+          setFirebaseRedeemedRewards(redeemedRewards);
+        } catch (error) {
+          console.error('RewardsScreen: Error refreshing profile on focus:', error);
+        }
+      };
+      
+      refreshProfile();
+    }, [currentUser, firebaseService])
+  );
+  
+  // Use Firebase profile if available, otherwise fall back to Redux profile
+  const displayProfile = firebaseProfile || userProfile;
+
+  // Check if a reward has been redeemed by the user
+  const isRewardRedeemed = (rewardId: string) => {
+    return firebaseRedeemedRewards.some(redeemedReward => redeemedReward.rewardId === rewardId);
+  };
+
+
+
+  const handleRedeemReward = async (reward: any) => {
+    if (!displayProfile || !currentUser || displayProfile.totalPoints < reward.pointsCost) {
       Alert.alert(
         'Insufficient Points',
-        `You need ${reward.pointsCost} points to redeem this reward. You currently have ${userProfile?.totalPoints || 0} points.`
+        `You need ${reward.pointsCost} points to redeem this reward. You currently have ${displayProfile?.totalPoints || 0} points.`
+      );
+      return;
+    }
+
+    if (isRewardRedeemed(reward.id)) {
+      Alert.alert(
+        'Already Redeemed',
+        'You have already redeemed this reward.'
       );
       return;
     }
@@ -65,13 +112,49 @@ const RewardsScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Redeem',
-          onPress: () => {
-            dispatch(redeemReward(reward.id));
-            dispatch(spendPoints(reward.pointsCost));
-            Alert.alert(
-              'Reward Redeemed!',
-              'Your reward has been successfully redeemed. Check the "My Rewards" section for your voucher.'
-            );
+          onPress: async () => {
+            try {
+              // Update Firebase first - deduct points
+              const newPointsBalance = displayProfile.totalPoints - reward.pointsCost;
+              await firebaseService.updateUserProfile(currentUser.uid, {
+                totalPoints: newPointsBalance,
+              });
+
+              // Store redeemed reward in Firebase
+              const qrCode = `QR-${reward.id}-${Date.now()}`;
+              await firebaseService.addRedeemedReward(currentUser.uid, {
+                rewardId: reward.id,
+                title: reward.title,
+                pointsCost: reward.pointsCost,
+                category: reward.category,
+                redeemedAt: new Date(),
+                qrCode: qrCode,
+              });
+
+              // Update local Redux state
+              dispatch(spendPoints(reward.pointsCost));
+              dispatch(redeemReward(reward.id));
+
+              // Refresh the Firebase profile to show updated points
+              await firebaseService.refreshUserStats(currentUser.uid);
+              const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
+              setFirebaseProfile(updatedProfile);
+
+              // Refresh redeemed rewards list
+              const updatedRedeemedRewards = await firebaseService.getUserRedeemedRewards(currentUser.uid);
+              setFirebaseRedeemedRewards(updatedRedeemedRewards);
+
+              Alert.alert(
+                'Reward Redeemed!',
+                `You have successfully redeemed "${reward.title}" for ${reward.pointsCost} points. Your new balance is ${newPointsBalance} points.\n\nVoucher Code: ${qrCode}`
+              );
+            } catch (error) {
+              console.error('Error redeeming reward:', error);
+              Alert.alert(
+                'Redemption Failed',
+                'There was an error processing your reward redemption. Please try again.'
+              );
+            }
           },
         },
       ]
@@ -119,7 +202,7 @@ const RewardsScreen: React.FC = () => {
           >
             <View style={styles.pointsContent}>
               <Text style={styles.pointsLabel}>Available Points</Text>
-              <Text style={styles.pointsValue}>{userProfile?.totalPoints || 0}</Text>
+              <Text style={styles.pointsValue}>{displayProfile?.totalPoints || 0}</Text>
             </View>
             <Ionicons name="star" size={32} color="#FFFFFF" style={styles.pointsIcon} />
           </LinearGradient>
@@ -128,8 +211,13 @@ const RewardsScreen: React.FC = () => {
         {/* Available Rewards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Available Rewards</Text>
-          {mockRewards.map((reward) => (
-            <View key={reward.id} style={styles.rewardCard}>
+          {availableRewards.map((reward, index) => {
+            const isRedeemed = isRewardRedeemed(reward.id);
+            return (
+            <View key={`available-${reward.id}-${index}`} style={[
+              styles.rewardCard,
+              isRedeemed && styles.redeemedRewardCard
+            ]}>
               <View style={styles.rewardHeader}>
                 <View style={[styles.categoryIcon, { backgroundColor: getCategoryColor(reward.category) }]}>
                   <Ionicons 
@@ -156,27 +244,84 @@ const RewardsScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.redeemButton,
-                    (userProfile?.totalPoints || 0) < reward.pointsCost && styles.redeemButtonDisabled
+                    ((displayProfile?.totalPoints || 0) < reward.pointsCost || isRedeemed) && styles.redeemButtonDisabled
                   ]}
                   onPress={() => handleRedeemReward(reward)}
-                  disabled={(userProfile?.totalPoints || 0) < reward.pointsCost}
+                  disabled={(displayProfile?.totalPoints || 0) < reward.pointsCost || isRedeemed}
                 >
                   <LinearGradient
                     colors={
-                      (userProfile?.totalPoints || 0) >= reward.pointsCost
+                      isRedeemed
+                        ? ['#27AE60', '#2ECC71'] as const
+                        : (displayProfile?.totalPoints || 0) >= reward.pointsCost
                         ? ['#4ECDC4', '#44A08D'] as const
                         : ['#BDC3C7', '#95A5A6'] as const
                     }
                     style={styles.redeemButtonGradient}
                   >
-                    <Text style={styles.redeemButtonText}>
-                      {(userProfile?.totalPoints || 0) >= reward.pointsCost ? 'Redeem' : 'Not enough points'}
-                    </Text>
+                    <View style={styles.buttonContent}>
+                      {isRedeemed && (
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={styles.buttonIcon} />
+                      )}
+                      <Text style={styles.redeemButtonText}>
+                        {isRedeemed 
+                          ? 'Redeemed' 
+                          : (displayProfile?.totalPoints || 0) >= reward.pointsCost 
+                          ? 'Redeem' 
+                          : 'Not enough points'}
+                      </Text>
+                    </View>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
-          ))}
+            );
+          })}
+        </View>
+
+        {/* Redeemed Rewards */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Rewards</Text>
+          {firebaseRedeemedRewards.length > 0 ? (
+            firebaseRedeemedRewards.map((reward, index) => (
+              <View key={`redeemed-${reward.id}-${index}`} style={styles.redeemedRewardCard}>
+                <View style={styles.rewardHeader}>
+                  <View style={[styles.categoryIcon, { backgroundColor: getCategoryColor(reward.category) }]}>
+                    <Ionicons 
+                      name={getCategoryIcon(reward.category) as keyof typeof Ionicons.glyphMap} 
+                      size={24} 
+                      color="#FFFFFF" 
+                    />
+                  </View>
+                  <View style={styles.rewardInfo}>
+                    <Text style={styles.rewardTitle}>{reward.title}</Text>
+                    <Text style={styles.rewardDescription}>{reward.description}</Text>
+                    <Text style={styles.redeemedDate}>
+                      Redeemed: {reward.redeemedAt ? new Date(reward.redeemedAt).toLocaleDateString() : 'Unknown'}
+                    </Text>
+                  </View>
+                  <View style={styles.redeemedBadge}>
+                    <Ionicons name="checkmark-circle" size={24} color="#27AE60" />
+                  </View>
+                </View>
+                
+                {reward.qrCode && (
+                  <View style={styles.qrCodeSection}>
+                    <Text style={styles.qrCodeLabel}>Your Voucher Code:</Text>
+                    <Text style={styles.qrCode}>{reward.qrCode}</Text>
+                  </View>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="gift-outline" size={64} color="#BDC3C7" />
+              <Text style={styles.emptyTitle}>No Rewards Yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Redeem your first reward to see it here!
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Tips */}
@@ -334,6 +479,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 4,
+  },
   tipCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -371,6 +524,62 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ctaDescription: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  redeemedRewardCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    opacity: 0.7,
+  },
+  redeemedDate: {
+    fontSize: 12,
+    color: '#27AE60',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  redeemedBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrCodeSection: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    alignItems: 'center',
+  },
+  qrCodeLabel: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginBottom: 4,
+  },
+  qrCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    fontFamily: 'monospace',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
     fontSize: 14,
     color: '#7F8C8D',
     textAlign: 'center',

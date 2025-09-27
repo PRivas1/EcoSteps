@@ -73,6 +73,33 @@ export interface TransitHistoryEntry {
   createdAt: Date;
 }
 
+export interface CyclingHistoryEntry {
+  id?: string;
+  userId: string;
+  distance: number;
+  duration: number; // in seconds
+  points: number;
+  startTime: Date;
+  endTime: Date;
+  startStation?: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  endStation?: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  bikeShareSystem: 'indego';
+  cyclingMode: 'cycling';
+  createdAt: Date;
+}
+
 class FirebaseService {
   private static instance: FirebaseService;
 
@@ -206,6 +233,9 @@ class FirebaseService {
         createdAt: serverTimestamp(),
       });
 
+      // Add points to user's profile
+      await this.addPointsFromActivity(walkData.userId, walkData.points);
+
       // Log analytics event
       this.logEvent('walk_completed', {
         distance: walkData.distance,
@@ -264,16 +294,18 @@ class FirebaseService {
   async getUserTotalStats(userId: string): Promise<{
     totalWalks: number;
     totalTransits: number;
+    totalCycling: number;
     totalActivities: number;
     totalDistance: number;
     totalDuration: number;
     totalPoints: number;
   }> {
     try {
-      // Get walks and transits in parallel
-      const [walks, transits] = await Promise.all([
+      // Get walks, transits, and cycling in parallel
+      const [walks, transits, cycling] = await Promise.all([
         this.getUserWalkHistory(userId, 1000),
-        this.getUserTransitHistory(userId, 1000)
+        this.getUserTransitHistory(userId, 1000),
+        this.getUserCyclingHistory(userId, 1000)
       ]);
       
       const walkStats = walks.reduce(
@@ -306,16 +338,32 @@ class FirebaseService {
         }
       );
 
+      const cyclingStats = cycling.reduce(
+        (acc, cycle) => ({
+          totalCycling: acc.totalCycling + 1,
+          totalDistance: acc.totalDistance + cycle.distance,
+          totalDuration: acc.totalDuration + cycle.duration,
+          totalPoints: acc.totalPoints + cycle.points,
+        }),
+        {
+          totalCycling: 0,
+          totalDistance: 0,
+          totalDuration: 0,
+          totalPoints: 0,
+        }
+      );
+
       const combinedStats = {
         totalWalks: walkStats.totalWalks,
         totalTransits: transitStats.totalTransits,
-        totalActivities: walkStats.totalWalks + transitStats.totalTransits,
-        totalDistance: walkStats.totalDistance + transitStats.totalDistance,
-        totalDuration: walkStats.totalDuration + transitStats.totalDuration,
-        totalPoints: walkStats.totalPoints + transitStats.totalPoints,
+        totalCycling: cyclingStats.totalCycling,
+        totalActivities: walkStats.totalWalks + transitStats.totalTransits + cyclingStats.totalCycling,
+        totalDistance: walkStats.totalDistance + transitStats.totalDistance + cyclingStats.totalDistance,
+        totalDuration: walkStats.totalDuration + transitStats.totalDuration + cyclingStats.totalDuration,
+        totalPoints: walkStats.totalPoints + transitStats.totalPoints + cyclingStats.totalPoints,
       };
 
-      console.log(`User ${userId} combined stats: ${combinedStats.totalWalks} walks, ${combinedStats.totalTransits} transits, ${combinedStats.totalActivities} total activities`);
+      console.log(`User ${userId} combined stats: ${combinedStats.totalWalks} walks, ${combinedStats.totalTransits} transits, ${combinedStats.totalCycling} cycling, ${combinedStats.totalActivities} total activities`);
       return combinedStats;
     } catch (error) {
       console.error('Error getting user total stats:', error);
@@ -357,6 +405,9 @@ class FirebaseService {
         ...transitData,
         createdAt: serverTimestamp(),
       });
+
+      // Add points to user's profile
+      await this.addPointsFromActivity(transitData.userId, transitData.points);
 
       // Log analytics event
       this.logEvent('transit_completed', {
@@ -434,24 +485,136 @@ class FirebaseService {
     }
   }
 
+  // Cycling History Management - User-specific subcollections
+  // Structure: users/{userId}/cyclingHistory/{cyclingId}
+  async addCyclingToHistory(cyclingData: Omit<CyclingHistoryEntry, 'id' | 'createdAt'>): Promise<string> {
+    try {
+      // Create user-specific subcollection: users/{userId}/cyclingHistory
+      const userCyclingHistoryRef = collection(firestore, 'users', cyclingData.userId, 'cyclingHistory');
+      const docRef = await addDoc(userCyclingHistoryRef, {
+        ...cyclingData,
+        createdAt: serverTimestamp(),
+      });
+
+      // Add points to user's profile
+      await this.addPointsFromActivity(cyclingData.userId, cyclingData.points);
+
+      // Log analytics event
+      this.logEvent('cycling_completed', {
+        distance: cyclingData.distance,
+        duration: cyclingData.duration,
+        points: cyclingData.points,
+        bikeShareSystem: cyclingData.bikeShareSystem,
+        userId: cyclingData.userId,
+      });
+
+      console.log(`Cycling trip added to user ${cyclingData.userId} history with ID:`, docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding cycling to user history:', error);
+      throw error;
+    }
+  }
+
+  async getUserCyclingHistory(
+    userId: string, 
+    limitCount: number = 10
+  ): Promise<CyclingHistoryEntry[]> {
+    try {
+      // Query user-specific subcollection: users/{userId}/cyclingHistory
+      const userCyclingHistoryRef = collection(firestore, 'users', userId, 'cyclingHistory');
+      
+      const q = query(
+        userCyclingHistoryRef,
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const cycling: CyclingHistoryEntry[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        cycling.push({
+          id: doc.id,
+          ...data,
+          // Convert Firestore timestamps to Date objects
+          startTime: data.startTime?.toDate?.() || data.startTime,
+          endTime: data.endTime?.toDate?.() || data.endTime,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        } as CyclingHistoryEntry);
+      });
+
+      console.log(`Retrieved ${cycling.length} cycling trips for user ${userId}`);
+      return cycling;
+    } catch (error) {
+      console.error('Error getting user cycling history:', error);
+      return [];
+    }
+  }
+
+  async getUserCyclingCount(userId: string): Promise<number> {
+    try {
+      const userCyclingHistoryRef = collection(firestore, 'users', userId, 'cyclingHistory');
+      const querySnapshot = await getDocs(userCyclingHistoryRef);
+      return querySnapshot.size;
+    } catch (error) {
+      console.error('Error getting user cycling count:', error);
+      return 0;
+    }
+  }
+
+  async deleteUserCycling(userId: string, cyclingId: string): Promise<void> {
+    try {
+      const cyclingRef = doc(firestore, 'users', userId, 'cyclingHistory', cyclingId);
+      await deleteDoc(cyclingRef);
+      console.log(`Deleted cycling ${cyclingId} for user ${userId}`);
+    } catch (error) {
+      console.error('Error deleting user cycling:', error);
+      throw error;
+    }
+  }
+
   // Refresh user profile stats based on actual walk and transit history data
+  // Note: This method preserves totalPoints to account for reward redemptions
   async refreshUserStats(userId: string): Promise<void> {
     try {
       const actualStats = await this.getUserTotalStats(userId);
       const currentProfile = await this.getUserProfile(userId);
       
       if (currentProfile) {
+        // Calculate level based on current totalPoints (not activity points)
+        const currentTotalPoints = currentProfile.totalPoints || 0;
+        
         await this.updateUserProfile(userId, {
-          totalPoints: actualStats.totalPoints,
+          // DO NOT update totalPoints here - preserve existing value to account for reward redemptions
           activitiesCompleted: actualStats.totalActivities, // Now includes both walks and transits
           totalDistance: actualStats.totalDistance,
-          level: Math.floor(actualStats.totalPoints / 100) + 1,
+          level: Math.floor(currentTotalPoints / 100) + 1,
         });
         
-        console.log(`Refreshed user ${userId} stats: ${actualStats.totalActivities} activities (${actualStats.totalWalks} walks + ${actualStats.totalTransits} transits), ${actualStats.totalPoints} points`);
+        console.log(`Refreshed user ${userId} stats: ${actualStats.totalActivities} activities (${actualStats.totalWalks} walks + ${actualStats.totalTransits} transits + ${actualStats.totalCycling} cycling), current points: ${currentTotalPoints}`);
       }
     } catch (error) {
       console.error('Error refreshing user stats:', error);
+      throw error;
+    }
+  }
+
+  // Add points from a new activity (used when completing activities)
+  async addPointsFromActivity(userId: string, points: number): Promise<void> {
+    try {
+      const currentProfile = await this.getUserProfile(userId);
+      if (currentProfile) {
+        const newTotalPoints = (currentProfile.totalPoints || 0) + points;
+        await this.updateUserProfile(userId, {
+          totalPoints: newTotalPoints,
+          level: Math.floor(newTotalPoints / 100) + 1,
+        });
+        console.log(`Added ${points} points to user ${userId}. New total: ${newTotalPoints}`);
+      }
+    } catch (error) {
+      console.error('Error adding points from activity:', error);
       throw error;
     }
   }
@@ -499,6 +662,62 @@ class FirebaseService {
   }
 
   // Get current authenticated user
+  // Reward redemption management
+  async addRedeemedReward(userId: string, rewardData: {
+    rewardId: string;
+    title: string;
+    pointsCost: number;
+    category: string;
+    redeemedAt: Date;
+    qrCode: string;
+  }): Promise<string> {
+    try {
+      const userRedeemedRewardsRef = collection(firestore, 'users', userId, 'redeemedRewards');
+      const docRef = await addDoc(userRedeemedRewardsRef, {
+        ...rewardData,
+        createdAt: serverTimestamp(),
+      });
+
+      this.logEvent('reward_redeemed', {
+        rewardId: rewardData.rewardId,
+        pointsCost: rewardData.pointsCost,
+        category: rewardData.category,
+        userId: userId,
+      });
+
+      console.log(`Reward ${rewardData.rewardId} redeemed by user ${userId} with ID:`, docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding redeemed reward:', error);
+      throw error;
+    }
+  }
+
+  async getUserRedeemedRewards(userId: string): Promise<any[]> {
+    try {
+      const userRedeemedRewardsRef = collection(firestore, 'users', userId, 'redeemedRewards');
+      const q = query(userRedeemedRewardsRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const redeemedRewards: any[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        redeemedRewards.push({
+          id: doc.id,
+          ...data,
+          redeemedAt: data.redeemedAt?.toDate?.() || data.redeemedAt,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        });
+      });
+
+      console.log(`Retrieved ${redeemedRewards.length} redeemed rewards for user ${userId}`);
+      return redeemedRewards;
+    } catch (error) {
+      console.error('Error getting user redeemed rewards:', error);
+      return [];
+    }
+  }
+
   getCurrentUser(): User | null {
     return auth.currentUser;
   }

@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -54,6 +54,26 @@ const HomeScreen: React.FC = () => {
     
     loadFirebaseProfile();
   }, [currentUser, firebaseService]);
+
+  // Refresh profile when screen comes into focus (e.g., returning from activities)
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshProfile = async () => {
+        if (!currentUser) return;
+        
+        try {
+          await firebaseService.refreshUserStats(currentUser.uid);
+          const profile = await firebaseService.getUserProfile(currentUser.uid);
+          setFirebaseProfile(profile);
+          console.log('HomeScreen: Refreshed profile on focus');
+        } catch (error) {
+          console.error('HomeScreen: Error refreshing profile on focus:', error);
+        }
+      };
+      
+      refreshProfile();
+    }, [currentUser, firebaseService])
+  );
   
   // Use Firebase profile if available, otherwise fall back to Redux profile
   const displayProfile = firebaseProfile || userProfile;
@@ -101,25 +121,43 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.nameText}>{displayProfile?.name}</Text>
           
           {/* Points Card */}
-          <LinearGradient
-            colors={['#4ECDC4', '#44A08D'] as const}
-            style={styles.pointsCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          <TouchableOpacity
+            onPress={async () => {
+              if (currentUser) {
+                try {
+                  await firebaseService.refreshUserStats(currentUser.uid);
+                  const profile = await firebaseService.getUserProfile(currentUser.uid);
+                  setFirebaseProfile(profile);
+                } catch (error) {
+                  console.error('Error refreshing points:', error);
+                }
+              }
+            }}
+            activeOpacity={0.8}
           >
-            <View style={styles.pointsContent}>
-              <View style={styles.pointsInfo}>
-                <Text style={styles.pointsLabel}>Your Points</Text>
-                <Text style={styles.pointsValue}>{displayProfile?.totalPoints || 0}</Text>
+            <LinearGradient
+              colors={['#4ECDC4', '#44A08D'] as const}
+              style={styles.pointsCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.pointsContent}>
+                <View style={styles.pointsInfo}>
+                  <Text style={styles.pointsLabel}>Your Points</Text>
+                  <Text style={styles.pointsValue}>{displayProfile?.totalPoints || 0}</Text>
+                </View>
+                <View style={styles.levelInfo}>
+                  <Text style={styles.levelLabel}>Level {displayProfile?.level || 1}</Text>
+                  <Text style={styles.levelSubtext}>
+                    {Math.max(0, 100 - ((displayProfile?.totalPoints || 0) % 100))} pts to next level
+                  </Text>
+                </View>
+                <View style={styles.refreshIndicator}>
+                  <Ionicons name="refresh" size={16} color="rgba(255,255,255,0.7)" />
+                </View>
               </View>
-              <View style={styles.levelInfo}>
-                <Text style={styles.levelLabel}>Level {displayProfile?.level || 1}</Text>
-                <Text style={styles.levelSubtext}>
-                  {Math.max(0, 100 - ((displayProfile?.totalPoints || 0) % 100))} pts to next level
-                </Text>
-              </View>
-            </View>
-          </LinearGradient>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {/* Transport Modes */}
@@ -375,6 +413,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7F8C8D',
     textAlign: 'center',
+  },
+  refreshIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    opacity: 0.7,
   },
 });
 

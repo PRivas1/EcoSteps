@@ -24,7 +24,7 @@ EcoSteps is a React Native mobile app that incentivizes users to choose eco-frie
 - **Points System**: Earn points based on distance and transport mode
 - **Levels**: Progress through levels (100 points per level)
 - **Achievements**: Unlock badges for various milestones
-- **Environmental Impact**: Track CO₂ savings and calories burned
+- **Environmental Impact**: Track CO₂ savings
 
 ### Rewards Program
 - **Point Redemption**: Exchange points for discounts
