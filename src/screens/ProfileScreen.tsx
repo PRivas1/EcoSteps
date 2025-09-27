@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { signOutUser } from '../store/slices/authSlice';
-import FirebaseService, { WalkHistoryEntry } from '../services/firebaseService';
+import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry } from '../services/firebaseService';
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -15,6 +15,7 @@ const ProfileScreen: React.FC = () => {
   
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [walkHistory, setWalkHistory] = useState<WalkHistoryEntry[]>([]);
+  const [transitHistory, setTransitHistory] = useState<TransitHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
@@ -39,13 +40,18 @@ const ProfileScreen: React.FC = () => {
       const profile = await firebaseService.getUserProfile(currentUser.uid);
       setFirebaseProfile(profile);
       
-      // Load walk history (with error handling for index issues)
+      // Load walk and transit history (with error handling for index issues)
       try {
-        const history = await firebaseService.getUserWalkHistory(currentUser.uid, 10);
-        setWalkHistory(history);
+        const [walkHist, transitHist] = await Promise.all([
+          firebaseService.getUserWalkHistory(currentUser.uid, 10),
+          firebaseService.getUserTransitHistory(currentUser.uid, 10)
+        ]);
+        setWalkHistory(walkHist);
+        setTransitHistory(transitHist);
       } catch (historyError) {
-        console.log('Walk history not available yet (index may be building):', historyError);
+        console.log('Activity history not available yet (index may be building):', historyError);
         setWalkHistory([]);
+        setTransitHistory([]);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -155,10 +161,10 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Recent Walks */}
+        {/* Recent Activities */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Walks</Text>
+            <Text style={styles.sectionTitle}>Recent Activities</Text>
             <TouchableOpacity onPress={loadUserData}>
               <Ionicons name="refresh" size={20} color="#4ECDC4" />
             </TouchableOpacity>
@@ -166,32 +172,46 @@ const ProfileScreen: React.FC = () => {
           
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading walks...</Text>
+              <Text style={styles.loadingText}>Loading activities...</Text>
             </View>
-          ) : walkHistory.length > 0 ? (
-            walkHistory.map((walk) => (
-              <View key={walk.id} style={styles.walkCard}>
-                <View style={styles.walkHeader}>
-                  <View style={styles.walkIcon}>
-                    <Ionicons name="walk" size={24} color="#4ECDC4" />
-                  </View>
-                  <View style={styles.walkInfo}>
-                    <Text style={styles.walkDate}>{formatDate(walk.createdAt)}</Text>
-                    <Text style={styles.walkTime}>{formatDuration(walk.duration)}</Text>
-                  </View>
-                  <View style={styles.walkStats}>
-                    <Text style={styles.walkDistance}>{walk.distance.toFixed(2)} km</Text>
-                    <Text style={styles.walkPoints}>+{walk.points} pts</Text>
+          ) : (walkHistory.length > 0 || transitHistory.length > 0) ? (
+            (() => {
+              // Combine and sort activities by date (latest first)
+              const allActivities = [
+                ...walkHistory.map(walk => ({ ...walk, type: 'walk' as const })),
+                ...transitHistory.map(transit => ({ ...transit, type: 'transit' as const }))
+              ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+              return allActivities.map((activity) => (
+                <View key={`${activity.type}-${activity.id}`} style={styles.walkCard}>
+                  <View style={styles.walkHeader}>
+                    <View style={styles.walkIcon}>
+                      <Ionicons 
+                        name={activity.type === 'walk' ? 'walk' : 'bus'} 
+                        size={24} 
+                        color={activity.type === 'walk' ? '#4ECDC4' : '#E74C3C'} 
+                      />
+                    </View>
+                    <View style={styles.walkInfo}>
+                      <Text style={styles.walkDate}>{formatDate(activity.createdAt)}</Text>
+                      <Text style={styles.walkTime}>
+                        {activity.type === 'walk' ? 'Walking' : 'Public Transit'} • {formatDuration(activity.duration)}
+                      </Text>
+                    </View>
+                    <View style={styles.walkStats}>
+                      <Text style={styles.walkDistance}>{activity.distance.toFixed(2)} km</Text>
+                      <Text style={styles.walkPoints}>+{activity.points} pts</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))
+              ));
+            })()
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="walk-outline" size={64} color="#BDC3C7" />
-              <Text style={styles.emptyTitle}>No walks yet</Text>
+              <Ionicons name="fitness-outline" size={64} color="#BDC3C7" />
+              <Text style={styles.emptyTitle}>No activities yet</Text>
               <Text style={styles.emptySubtitle}>
-                Start your first eco-friendly walk to see your activity here!
+                Start your first eco-friendly activity to see your progress here!
               </Text>
             </View>
           )}

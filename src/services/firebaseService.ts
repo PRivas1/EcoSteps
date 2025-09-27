@@ -50,6 +50,29 @@ export interface WalkHistoryEntry {
   createdAt: Date;
 }
 
+export interface TransitHistoryEntry {
+  id?: string;
+  userId: string;
+  distance: number;
+  duration: number; // in seconds
+  points: number;
+  startTime: Date;
+  endTime: Date;
+  startLocation?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  endLocation?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  routeType: 'bus' | 'train' | 'subway' | 'tram' | 'metro';
+  transitMode: 'transit';
+  createdAt: Date;
+}
+
 class FirebaseService {
   private static instance: FirebaseService;
 
@@ -240,14 +263,20 @@ class FirebaseService {
 
   async getUserTotalStats(userId: string): Promise<{
     totalWalks: number;
+    totalTransits: number;
+    totalActivities: number;
     totalDistance: number;
     totalDuration: number;
     totalPoints: number;
   }> {
     try {
-      const walks = await this.getUserWalkHistory(userId, 1000); // Get more for stats
+      // Get walks and transits in parallel
+      const [walks, transits] = await Promise.all([
+        this.getUserWalkHistory(userId, 1000),
+        this.getUserTransitHistory(userId, 1000)
+      ]);
       
-      const stats = walks.reduce(
+      const walkStats = walks.reduce(
         (acc, walk) => ({
           totalWalks: acc.totalWalks + 1,
           totalDistance: acc.totalDistance + walk.distance,
@@ -262,7 +291,32 @@ class FirebaseService {
         }
       );
 
-      return stats;
+      const transitStats = transits.reduce(
+        (acc, transit) => ({
+          totalTransits: acc.totalTransits + 1,
+          totalDistance: acc.totalDistance + transit.distance,
+          totalDuration: acc.totalDuration + transit.duration,
+          totalPoints: acc.totalPoints + transit.points,
+        }),
+        {
+          totalTransits: 0,
+          totalDistance: 0,
+          totalDuration: 0,
+          totalPoints: 0,
+        }
+      );
+
+      const combinedStats = {
+        totalWalks: walkStats.totalWalks,
+        totalTransits: transitStats.totalTransits,
+        totalActivities: walkStats.totalWalks + transitStats.totalTransits,
+        totalDistance: walkStats.totalDistance + transitStats.totalDistance,
+        totalDuration: walkStats.totalDuration + transitStats.totalDuration,
+        totalPoints: walkStats.totalPoints + transitStats.totalPoints,
+      };
+
+      console.log(`User ${userId} combined stats: ${combinedStats.totalWalks} walks, ${combinedStats.totalTransits} transits, ${combinedStats.totalActivities} total activities`);
+      return combinedStats;
     } catch (error) {
       console.error('Error getting user total stats:', error);
       throw error;
@@ -293,7 +347,94 @@ class FirebaseService {
     }
   }
 
-  // Refresh user profile stats based on actual walk history data
+  // Transit History Management - User-specific subcollections
+  // Structure: users/{userId}/transitHistory/{transitId}
+  async addTransitToHistory(transitData: Omit<TransitHistoryEntry, 'id' | 'createdAt'>): Promise<string> {
+    try {
+      // Create user-specific subcollection: users/{userId}/transitHistory
+      const userTransitHistoryRef = collection(firestore, 'users', transitData.userId, 'transitHistory');
+      const docRef = await addDoc(userTransitHistoryRef, {
+        ...transitData,
+        createdAt: serverTimestamp(),
+      });
+
+      // Log analytics event
+      this.logEvent('transit_completed', {
+        distance: transitData.distance,
+        duration: transitData.duration,
+        points: transitData.points,
+        routeType: transitData.routeType,
+        userId: transitData.userId,
+      });
+
+      console.log(`Transit trip added to user ${transitData.userId} history with ID:`, docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding transit to user history:', error);
+      throw error;
+    }
+  }
+
+  async getUserTransitHistory(
+    userId: string, 
+    limitCount: number = 10
+  ): Promise<TransitHistoryEntry[]> {
+    try {
+      // Query user-specific subcollection: users/{userId}/transitHistory
+      const userTransitHistoryRef = collection(firestore, 'users', userId, 'transitHistory');
+      
+      const q = query(
+        userTransitHistoryRef,
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const transits: TransitHistoryEntry[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        transits.push({
+          id: doc.id,
+          ...data,
+          // Convert Firestore timestamps to Date objects
+          startTime: data.startTime?.toDate?.() || data.startTime,
+          endTime: data.endTime?.toDate?.() || data.endTime,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        } as TransitHistoryEntry);
+      });
+
+      console.log(`Retrieved ${transits.length} transit trips for user ${userId}`);
+      return transits;
+    } catch (error) {
+      console.error('Error getting user transit history:', error);
+      return [];
+    }
+  }
+
+  async getUserTransitCount(userId: string): Promise<number> {
+    try {
+      const userTransitHistoryRef = collection(firestore, 'users', userId, 'transitHistory');
+      const querySnapshot = await getDocs(userTransitHistoryRef);
+      return querySnapshot.size;
+    } catch (error) {
+      console.error('Error getting user transit count:', error);
+      return 0;
+    }
+  }
+
+  async deleteUserTransit(userId: string, transitId: string): Promise<void> {
+    try {
+      const transitRef = doc(firestore, 'users', userId, 'transitHistory', transitId);
+      await deleteDoc(transitRef);
+      console.log(`Deleted transit ${transitId} for user ${userId}`);
+    } catch (error) {
+      console.error('Error deleting user transit:', error);
+      throw error;
+    }
+  }
+
+  // Refresh user profile stats based on actual walk and transit history data
   async refreshUserStats(userId: string): Promise<void> {
     try {
       const actualStats = await this.getUserTotalStats(userId);
@@ -302,12 +443,12 @@ class FirebaseService {
       if (currentProfile) {
         await this.updateUserProfile(userId, {
           totalPoints: actualStats.totalPoints,
-          activitiesCompleted: actualStats.totalWalks,
+          activitiesCompleted: actualStats.totalActivities, // Now includes both walks and transits
           totalDistance: actualStats.totalDistance,
           level: Math.floor(actualStats.totalPoints / 100) + 1,
         });
         
-        console.log(`Refreshed user ${userId} stats: ${actualStats.totalWalks} activities, ${actualStats.totalPoints} points`);
+        console.log(`Refreshed user ${userId} stats: ${actualStats.totalActivities} activities (${actualStats.totalWalks} walks + ${actualStats.totalTransits} transits), ${actualStats.totalPoints} points`);
       }
     } catch (error) {
       console.error('Error refreshing user stats:', error);

@@ -149,12 +149,12 @@ class SyncService {
         
         await this.firebaseService.updateUserProfile(userId, {
           totalPoints: actualStats.totalPoints,
-          activitiesCompleted: actualStats.totalWalks, // Use actual count from database
+          activitiesCompleted: actualStats.totalActivities, // Use actual count from database (walks + transits)
           totalDistance: actualStats.totalDistance,
           level: Math.floor(actualStats.totalPoints / 100) + 1,
         });
         
-        console.log(`Updated user stats: ${actualStats.totalWalks} activities, ${actualStats.totalPoints} points, ${actualStats.totalDistance.toFixed(2)} km`);
+        console.log(`Updated user stats: ${actualStats.totalActivities} activities (${actualStats.totalWalks} walks + ${actualStats.totalTransits} transits), ${actualStats.totalPoints} points, ${actualStats.totalDistance.toFixed(2)} km`);
       }
     } catch (error) {
       console.error('Error updating user stats:', error);

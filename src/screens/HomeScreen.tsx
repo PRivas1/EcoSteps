@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import FirebaseService from '../services/firebaseService';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -23,11 +24,39 @@ const { width } = Dimensions.get('window');
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const userProfile = useSelector((state: RootState) => state.user.profile);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
+  const [firebaseService] = useState(() => FirebaseService.getInstance());
+  
   // Temporarily comment out until store is fixed
   // const recentActivities = useSelector((state: RootState) => 
   //   state.activity.activities.slice(-3).reverse()
   // );
   const recentActivities: any[] = [];
+
+  // Load fresh profile data from Firebase when component mounts or user changes
+  useEffect(() => {
+    const loadFirebaseProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Refresh stats to ensure we have the latest data
+        await firebaseService.refreshUserStats(currentUser.uid);
+        
+        // Get the updated profile
+        const profile = await firebaseService.getUserProfile(currentUser.uid);
+        setFirebaseProfile(profile);
+        console.log('HomeScreen: Loaded fresh profile data:', profile);
+      } catch (error) {
+        console.error('HomeScreen: Error loading profile:', error);
+      }
+    };
+    
+    loadFirebaseProfile();
+  }, [currentUser, firebaseService]);
+  
+  // Use Firebase profile if available, otherwise fall back to Redux profile
+  const displayProfile = firebaseProfile || userProfile;
 
   const transportModes = [
     {
@@ -69,7 +98,7 @@ const HomeScreen: React.FC = () => {
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.welcomeText}>Welcome back!</Text>
-          <Text style={styles.nameText}>{userProfile?.name}</Text>
+          <Text style={styles.nameText}>{displayProfile?.name}</Text>
           
           {/* Points Card */}
           <LinearGradient
@@ -81,12 +110,12 @@ const HomeScreen: React.FC = () => {
             <View style={styles.pointsContent}>
               <View style={styles.pointsInfo}>
                 <Text style={styles.pointsLabel}>Your Points</Text>
-                <Text style={styles.pointsValue}>{userProfile?.totalPoints || 0}</Text>
+                <Text style={styles.pointsValue}>{displayProfile?.totalPoints || 0}</Text>
               </View>
               <View style={styles.levelInfo}>
-                <Text style={styles.levelLabel}>Level {userProfile?.level || 1}</Text>
+                <Text style={styles.levelLabel}>Level {displayProfile?.level || 1}</Text>
                 <Text style={styles.levelSubtext}>
-                  {Math.max(0, 100 - ((userProfile?.totalPoints || 0) % 100))} pts to next level
+                  {Math.max(0, 100 - ((displayProfile?.totalPoints || 0) % 100))} pts to next level
                 </Text>
               </View>
             </View>
@@ -156,15 +185,15 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Your Impact</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userProfile?.activitiesCompleted || 0}</Text>
+              <Text style={styles.statValue}>{displayProfile?.activitiesCompleted || 0}</Text>
               <Text style={styles.statLabel}>Activities</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{(userProfile?.totalDistance || 0).toFixed(1)}</Text>
+              <Text style={styles.statValue}>{(displayProfile?.totalDistance || 0).toFixed(1)}</Text>
               <Text style={styles.statLabel}>Total km</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userProfile?.badges?.length || 0}</Text>
+              <Text style={styles.statValue}>{displayProfile?.badges?.length || 0}</Text>
               <Text style={styles.statLabel}>Badges</Text>
             </View>
           </View>
