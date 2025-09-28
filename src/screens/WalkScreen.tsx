@@ -13,7 +13,7 @@ import { startActivity, addRoutePoint, stopActivity } from '../store/slices/acti
 import { completeActivity } from '../store/slices/userSlice';
 import { setUserLocation } from '../store/slices/locationSlice';
 import LocationService from '../services/locationService';
-import FirebaseService from '../services/firebaseService';
+import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Location, RoutePoint } from '../types';
 
@@ -167,6 +167,7 @@ const WalkScreen: React.FC = () => {
           distance: currentDistance,
           duration: timeElapsed,
           points,
+          carbonSaved: calculateCarbonSavings(currentDistance, 'walk'),
           startTime: new Date(Date.now() - timeElapsed * 1000),
           endTime: new Date(),
           startLocation: userLocation || undefined,

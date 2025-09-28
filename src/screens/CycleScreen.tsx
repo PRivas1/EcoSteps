@@ -22,7 +22,7 @@ import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { RootState, AppDispatch } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import LocationService from '../services/locationService';
-import FirebaseService from '../services/firebaseService';
+import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import IndegoService, { IndegoStation } from '../services/indegoService';
 import PaymentScreen from '../components/PaymentScreen';
 
@@ -333,6 +333,7 @@ const CycleScreen: React.FC = () => {
         distance: distanceKm,
         duration: routeData.duration,
         points: points,
+        carbonSaved: calculateCarbonSavings(distanceKm, 'cycle'),
         startTime: new Date(),
         endTime: new Date(Date.now() + routeData.duration * 1000),
         startStation: nearbyStartStations[0] ? {

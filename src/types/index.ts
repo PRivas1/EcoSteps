@@ -70,6 +70,7 @@ export interface UserProfile {
   level: number;
   activitiesCompleted: number;
   totalDistance: number;
+  totalCarbonSaved: number; // Total CO2 saved in grams
   badges: string[];
 }
 

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { calculateCarbonSavings } from '../services/firebaseService';
 
 type ActivityCompletionScreenRouteProp = RouteProp<RootStackParamList, 'ActivityCompletion'>;
 type ActivityCompletionScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -127,7 +128,7 @@ const ActivityCompletionScreen: React.FC = () => {
             <View style={styles.impactItem}>
               <Ionicons name="leaf" size={20} color="#27AE60" />
               <Text style={styles.impactText}>
-                ~{(distance * 0.2).toFixed(1)} kg CO₂ saved
+                {(calculateCarbonSavings(distance, mode) / 1000).toFixed(1)} kg CO₂ saved
               </Text>
             </View>
 

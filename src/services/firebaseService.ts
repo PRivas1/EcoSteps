@@ -32,6 +32,7 @@ export interface WalkHistoryEntry {
   distance: number;
   duration: number; // in seconds
   points: number;
+  carbonSaved: number; // CO2 saved in grams
   startTime: Date;
   endTime: Date;
   startLocation?: {
@@ -56,6 +57,7 @@ export interface TransitHistoryEntry {
   distance: number;
   duration: number; // in seconds
   points: number;
+  carbonSaved: number; // CO2 saved in grams
   startTime: Date;
   endTime: Date;
   startLocation?: {
@@ -88,6 +90,7 @@ export interface CyclingHistoryEntry {
   distance: number;
   duration: number; // in seconds
   points: number;
+  carbonSaved: number; // CO2 saved in grams
   startTime: Date;
   endTime: Date;
   startStation?: {
@@ -116,6 +119,30 @@ export interface CyclingHistoryEntry {
     paidAt: Date; // Payment timestamp
   };
   createdAt: Date;
+}
+
+// Carbon footprint calculation constants (grams of CO2 per km)
+const CARBON_EMISSIONS = {
+  CAR: 251, // Average car emissions per km
+  WALKING: 0, // Walking produces no CO2
+  CYCLING: 0, // Cycling produces no CO2
+  PUBLIC_TRANSIT: 89, // Average public transit emissions per km
+};
+
+// Function to calculate carbon savings compared to driving a car
+export function calculateCarbonSavings(distance: number, mode: 'walk' | 'cycle' | 'transit'): number {
+  const carEmissions = distance * CARBON_EMISSIONS.CAR;
+  
+  switch (mode) {
+    case 'walk':
+      return carEmissions - (distance * CARBON_EMISSIONS.WALKING); // Full savings
+    case 'cycle':
+      return carEmissions - (distance * CARBON_EMISSIONS.CYCLING); // Full savings
+    case 'transit':
+      return carEmissions - (distance * CARBON_EMISSIONS.PUBLIC_TRANSIT); // Partial savings
+    default:
+      return 0;
+  }
 }
 
 class FirebaseService {
@@ -153,6 +180,7 @@ class FirebaseService {
         level: 1,
         activitiesCompleted: 0,
         totalDistance: 0,
+        totalCarbonSaved: 0,
         badges: [],
       });
 
@@ -317,6 +345,7 @@ class FirebaseService {
     totalDistance: number;
     totalDuration: number;
     totalPoints: number;
+    totalCarbonSaved: number;
   }> {
     try {
       // Get walks, transits, and cycling in parallel
@@ -332,12 +361,14 @@ class FirebaseService {
           totalDistance: acc.totalDistance + walk.distance,
           totalDuration: acc.totalDuration + walk.duration,
           totalPoints: acc.totalPoints + walk.points,
+          totalCarbonSaved: acc.totalCarbonSaved + (walk.carbonSaved || 0),
         }),
         {
           totalWalks: 0,
           totalDistance: 0,
           totalDuration: 0,
           totalPoints: 0,
+          totalCarbonSaved: 0,
         }
       );
 
@@ -347,12 +378,14 @@ class FirebaseService {
           totalDistance: acc.totalDistance + transit.distance,
           totalDuration: acc.totalDuration + transit.duration,
           totalPoints: acc.totalPoints + transit.points,
+          totalCarbonSaved: acc.totalCarbonSaved + (transit.carbonSaved || 0),
         }),
         {
           totalTransits: 0,
           totalDistance: 0,
           totalDuration: 0,
           totalPoints: 0,
+          totalCarbonSaved: 0,
         }
       );
 
@@ -362,12 +395,14 @@ class FirebaseService {
           totalDistance: acc.totalDistance + cycle.distance,
           totalDuration: acc.totalDuration + cycle.duration,
           totalPoints: acc.totalPoints + cycle.points,
+          totalCarbonSaved: acc.totalCarbonSaved + (cycle.carbonSaved || 0),
         }),
         {
           totalCycling: 0,
           totalDistance: 0,
           totalDuration: 0,
           totalPoints: 0,
+          totalCarbonSaved: 0,
         }
       );
 
@@ -379,6 +414,7 @@ class FirebaseService {
         totalDistance: walkStats.totalDistance + transitStats.totalDistance + cyclingStats.totalDistance,
         totalDuration: walkStats.totalDuration + transitStats.totalDuration + cyclingStats.totalDuration,
         totalPoints: walkStats.totalPoints + transitStats.totalPoints + cyclingStats.totalPoints,
+        totalCarbonSaved: walkStats.totalCarbonSaved + transitStats.totalCarbonSaved + cyclingStats.totalCarbonSaved,
       };
 
       console.log(`User ${userId} combined stats: ${combinedStats.totalWalks} walks, ${combinedStats.totalTransits} transits, ${combinedStats.totalCycling} cycling, ${combinedStats.totalActivities} total activities`);
@@ -608,6 +644,7 @@ class FirebaseService {
           // DO NOT update totalPoints here - preserve existing value to account for reward redemptions
           activitiesCompleted: actualStats.totalActivities, // Now includes both walks and transits
           totalDistance: actualStats.totalDistance,
+          totalCarbonSaved: actualStats.totalCarbonSaved,
           level: Math.floor(currentTotalPoints / 100) + 1,
         });
         
@@ -650,6 +687,7 @@ class FirebaseService {
         distance: activity.distance,
         duration: Math.floor((activity.endTime.getTime() - activity.startTime.getTime()) / 1000), // milliseconds to seconds
         points: activity.points,
+        carbonSaved: calculateCarbonSavings(activity.distance, 'walk'),
         startTime: activity.startTime,
         endTime: activity.endTime,
         startLocation: activity.startLocation,

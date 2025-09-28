@@ -196,6 +196,19 @@ const ProfileScreen: React.FC = () => {
               <Text style={styles.statLabel}>Total km</Text>
             </View>
           </View>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Ionicons name="leaf" size={32} color="#27AE60" />
+              <Text style={styles.statNumber}>{((profileData?.totalCarbonSaved || 0) / 1000).toFixed(1)}</Text>
+              <Text style={styles.statLabel}>CO₂ Saved (kg)</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="earth" size={32} color="#2E8B57" />
+              <Text style={styles.statNumber}>{Math.round((profileData?.totalCarbonSaved || 0) / 251) || 0}</Text>
+              <Text style={styles.statLabel}>Car km Avoided</Text>
+            </View>
+          </View>
         </View>
 
         {/* Recent Activities */}

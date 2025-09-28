@@ -15,6 +15,7 @@ const initialState: UserState = {
     level: 1,
     activitiesCompleted: 0,
     totalDistance: 0,
+    totalCarbonSaved: 0,
     badges: [],
   },
   isAuthenticated: true,

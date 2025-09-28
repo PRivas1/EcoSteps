@@ -22,7 +22,7 @@ import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { RootState, AppDispatch } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import LocationService from '../services/locationService';
-import FirebaseService from '../services/firebaseService';
+import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import PaymentScreen from '../components/PaymentScreen';
 
 const { width, height } = Dimensions.get('window');
@@ -435,6 +435,7 @@ const TransitScreen: React.FC = () => {
         distance: distanceKm,
         duration: routeData.duration,
         points: points,
+        carbonSaved: calculateCarbonSavings(distanceKm, 'transit'),
         startTime: new Date(),
         endTime: new Date(Date.now() + routeData.duration * 1000),
         startLocation: startLocation ? {
