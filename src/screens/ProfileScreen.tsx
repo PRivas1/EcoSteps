@@ -4,17 +4,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { RootState, AppDispatch } from '../store';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { signOutUser } from '../store/slices/authSlice';
 import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryEntry } from '../services/firebaseService';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import AllActivitiesModal from '../components/AllActivitiesModal';
+import { useTheme } from '../contexts/ThemeContext';
+
+type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const userProfile = useSelector((state: RootState) => state.user.profile);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const { theme } = useTheme();
   
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [walkHistory, setWalkHistory] = useState<WalkHistoryEntry[]>([]);
@@ -113,8 +120,9 @@ const ProfileScreen: React.FC = () => {
   };
 
   const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const totalSeconds = Math.floor(seconds); // Remove any decimals from input
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -133,6 +141,7 @@ const ProfileScreen: React.FC = () => {
 
   const profileData = firebaseProfile || userProfile;
   const insets = useSafeAreaInsets();
+  const styles = createStyles(theme);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -163,10 +172,6 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.userName}>{profileData?.name || currentUser?.displayName || 'EcoUser'}</Text>
             <Text style={styles.userEmail}>{profileData?.email || currentUser?.email || ''}</Text>
           </View>
-          
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
         </LinearGradient>
 
         {/* Stats Cards */}
@@ -364,6 +369,35 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.versionText}>Version 1.0.0</Text>
           </View>
         </View>
+
+        {/* Settings Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <TouchableOpacity 
+            style={styles.settingsCard}
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingsContent}>
+              <View style={styles.settingsIcon}>
+                <Ionicons name="settings-outline" size={24} color="#4ECDC4" />
+              </View>
+              <View style={styles.settingsText}>
+                <Text style={styles.settingsTitle}>App Settings</Text>
+                <Text style={styles.settingsDescription}>Customize your experience</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#BDC3C7" />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign Out Button */}
+        <View style={styles.signOutSection}>
+          <TouchableOpacity style={styles.signOutButtonBottom} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={20} color="#E74C3C" />
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Activity Detail Modal */}
@@ -386,10 +420,10 @@ const ProfileScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -411,12 +445,10 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileInfo: {
-    flex: 1,
     alignItems: 'center',
   },
   avatarContainer: {
@@ -438,8 +470,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
   },
-  signOutButton: {
-    padding: 8,
+  signOutSection: {
+    padding: 20,
+    paddingTop: 32,
+    paddingBottom: 40,
+  },
+  signOutButtonBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF5F5',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFEBEE',
+  },
+  signOutButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E74C3C',
   },
   statsContainer: {
     padding: 16,
@@ -486,7 +537,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: theme.colors.text,
+    marginBottom: 5,
   },
   loadingContainer: {
     padding: 32,
@@ -655,6 +707,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4ECDC4',
     fontWeight: '600',
+  },
+  settingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  settingsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingsIcon: {
+    marginRight: 16,
+  },
+  settingsText: {
+    flex: 1,
+  },
+  settingsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 2,
+  },
+  settingsDescription: {
+    fontSize: 14,
+    color: '#7F8C8D',
   },
 });
 

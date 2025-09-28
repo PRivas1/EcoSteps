@@ -16,6 +16,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import FirebaseService from '../services/firebaseService';
+import { useTheme } from '../contexts/ThemeContext';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,7 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const userProfile = useSelector((state: RootState) => state.user.profile);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const { theme } = useTheme();
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   
@@ -113,6 +115,7 @@ const HomeScreen: React.FC = () => {
   };
 
   const insets = useSafeAreaInsets();
+  const styles = createStyles(theme);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -251,10 +254,10 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: theme.colors.text,
   },
   header: {
     padding: 20,
@@ -279,13 +282,13 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 16,
-    color: '#7F8C8D',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   nameText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: theme.colors.text,
     marginBottom: 20,
   },
   pointsCard: {
@@ -332,7 +335,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   modeCard: {
@@ -343,6 +346,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    shadowColor: theme.colors.shadow,
+    backgroundColor: theme.colors.surface,
   },
   modeGradient: {
     padding: 20,

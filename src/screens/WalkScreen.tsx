@@ -11,7 +11,7 @@ import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { RootState, AppDispatch } from '../store';
 import { startActivity, addRoutePoint, stopActivity } from '../store/slices/activitySlice';
 import { completeActivity } from '../store/slices/userSlice';
-import { setUserLocation } from '../store/slices/locationSlice';
+import { setUserLocation, setLocationEnabled } from '../store/slices/locationSlice';
 import LocationService from '../services/locationService';
 import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -67,6 +67,49 @@ const WalkScreen: React.FC = () => {
     
     loadFirebaseProfile();
   }, [currentUser, firebaseService]);
+
+  // Get current location when screen loads
+  useEffect(() => {
+    const getCurrentLocationOnLoad = async () => {
+      console.log('WalkScreen: Location enabled status:', isLocationEnabled);
+      
+      if (!isLocationEnabled) {
+        console.log('WalkScreen: Location not enabled, skipping location fetch');
+        return;
+      }
+      
+      // Don't fetch if we already have a location
+      if (userLocation) {
+        console.log('WalkScreen: User location already available:', userLocation);
+        return;
+      }
+      
+      console.log('WalkScreen: Fetching current location on screen load...');
+      try {
+        const currentLocation = await locationService.getCurrentLocation();
+        if (currentLocation) {
+          dispatch(setUserLocation(currentLocation));
+          // Center map on current location
+          setMapRegion({
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+          console.log('WalkScreen: Current location fetched and set:', currentLocation);
+        } else {
+          console.log('WalkScreen: No location returned from locationService');
+        }
+      } catch (error) {
+        console.error('WalkScreen: Error getting current location on load:', error);
+      }
+    };
+
+    // Add a small delay to ensure Redux state is properly initialized
+    const timeoutId = setTimeout(getCurrentLocationOnLoad, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLocationEnabled, userLocation, locationService, dispatch]);
 
   // Timer effect for tracking time
   useEffect(() => {
@@ -232,6 +275,28 @@ const WalkScreen: React.FC = () => {
       return (
         <View style={styles.statusContainer}>
           <Text style={styles.statusText}>⚠️ Location permission required</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={async () => {
+              const granted = await locationService.requestPermissions();
+              if (granted) {
+                // Manually update location enabled state and fetch location
+                dispatch(setLocationEnabled(granted));
+                const currentLocation = await locationService.getCurrentLocation();
+                if (currentLocation) {
+                  dispatch(setUserLocation(currentLocation));
+                  setMapRegion({
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  });
+                }
+              }
+            }}
+          >
+            <Text style={styles.retryButtonText}>Enable Location</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -247,6 +312,29 @@ const WalkScreen: React.FC = () => {
     return (
       <View style={styles.statusContainer}>
         <Text style={styles.statusText}>📍 Getting location...</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={async () => {
+            console.log('WalkScreen: Manually fetching location...');
+            try {
+              const currentLocation = await locationService.getCurrentLocation();
+              if (currentLocation) {
+                dispatch(setUserLocation(currentLocation));
+                setMapRegion({
+                  latitude: currentLocation.latitude,
+                  longitude: currentLocation.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                });
+                console.log('WalkScreen: Manual location fetch successful:', currentLocation);
+              }
+            } catch (error) {
+              console.error('WalkScreen: Manual location fetch failed:', error);
+            }
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -470,6 +558,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2C3E50',
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#4ECDC4',
+    borderRadius: 6,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   syncStatus: {
     marginTop: 10,

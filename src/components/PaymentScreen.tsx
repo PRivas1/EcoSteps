@@ -67,7 +67,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({
   };
 
   const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const totalSeconds = Math.floor(seconds); // Remove any decimals from input
+    const mins = Math.floor(totalSeconds / 60);
     return `${mins} min`;
   };
 

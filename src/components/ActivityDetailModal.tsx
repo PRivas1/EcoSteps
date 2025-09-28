@@ -72,8 +72,9 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
   };
 
   const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const totalSeconds = Math.floor(seconds); // Remove any decimals from input
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
     if (mins > 0) {
       return `${mins}m ${secs}s`;
     }

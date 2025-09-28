@@ -13,12 +13,14 @@ import TransitScreen from '../screens/TransitScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import ActivityCompletionScreen from '../screens/ActivityCompletionScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   MainTabs: undefined;
   Walk: undefined;
   Cycle: undefined;
   Transit: undefined;
+  Settings: undefined;
   ActivityCompletion: {
     activityId: string;
     mode: 'walk' | 'cycle' | 'transit';
@@ -120,6 +122,13 @@ const AppNavigator = () => {
         <Stack.Screen 
           name="Transit" 
           component={TransitScreen} 
+          options={{ 
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="Settings" 
+          component={SettingsScreen} 
           options={{ 
             headerShown: false,
           }}

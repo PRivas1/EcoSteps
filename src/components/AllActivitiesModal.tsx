@@ -40,8 +40,9 @@ const AllActivitiesModal: React.FC<AllActivitiesModalProps> = ({
   };
 
   const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const totalSeconds = Math.floor(seconds); // Remove any decimals from input
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }

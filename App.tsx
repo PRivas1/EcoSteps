@@ -14,6 +14,7 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import LocationService from './src/services/locationService';
 import LocalStorageService from './src/services/localStorageService';
 import SyncService from './src/services/syncService';
+import { ThemeProvider } from './src/contexts/ThemeContext';
 
 const Stack = createStackNavigator();
 
@@ -88,8 +89,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
-        <StatusBar style="auto" />
-        <AppContent />
+        <ThemeProvider>
+          <StatusBar style="auto" />
+          <AppContent />
+        </ThemeProvider>
       </Provider>
     </SafeAreaProvider>
   );
