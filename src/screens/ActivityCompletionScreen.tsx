@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -19,6 +19,7 @@ type ActivityCompletionScreenNavigationProp = StackNavigationProp<RootStackParam
 const ActivityCompletionScreen: React.FC = () => {
   const navigation = useNavigation<ActivityCompletionScreenNavigationProp>();
   const route = useRoute<ActivityCompletionScreenRouteProp>();
+  const insets = useSafeAreaInsets();
   
   const { mode, distance, points } = route.params;
 
@@ -71,7 +72,19 @@ const ActivityCompletionScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Back Button */}
+      <View style={styles.backButtonContainer}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.navigate('MainTabs')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#2C3E50" />
+          <Text style={styles.backButtonText}>Home</Text>
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -148,7 +161,7 @@ const ActivityCompletionScreen: React.FC = () => {
         {/* Extra padding for comfortable scrolling */}
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -156,6 +169,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  backButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#2C3E50',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,

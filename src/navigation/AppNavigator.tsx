@@ -95,10 +95,7 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: styles.header,
-        headerTintColor: '#2C3E50',
-        headerTitleStyle: styles.headerTitle,
-        headerTitleAlign: 'center',
+        headerShown: false,
       }}
     >
         <Stack.Screen 
@@ -110,24 +107,21 @@ const AppNavigator = () => {
           name="Walk" 
           component={WalkScreen} 
           options={{ 
-            title: '🚶 Walking',
-            headerBackTitle: 'Back',
+            headerShown: false,
           }}
         />
         <Stack.Screen 
           name="Cycle" 
           component={CycleScreen} 
           options={{ 
-            title: '🚲 Cycling',
-            headerBackTitle: 'Back',
+            headerShown: false,
           }}
         />
         <Stack.Screen 
           name="Transit" 
           component={TransitScreen} 
           options={{ 
-            title: '🚌 Public Transport',
-            headerBackTitle: 'Back',
+            headerShown: false,
           }}
         />
         <Stack.Screen 
@@ -155,21 +149,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  header: {
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    height: 50, // Reduced header height
-  },
-  headerTitle: {
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
+
 });
 
 export default AppNavigator; 
