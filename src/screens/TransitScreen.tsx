@@ -23,6 +23,7 @@ import { RootState, AppDispatch } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import LocationService from '../services/locationService';
 import FirebaseService from '../services/firebaseService';
+import PaymentScreen from '../components/PaymentScreen';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,6 +58,9 @@ const TransitScreen: React.FC = () => {
   const navigation = useNavigation<TransitScreenNavigationProp>();
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  
+  // Redeemed rewards state
+  const [redeemedTransportRewards, setRedeemedTransportRewards] = useState<any[]>([]);
 
   // Location states
   const [startLocation, setStartLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -86,6 +90,9 @@ const TransitScreen: React.FC = () => {
   const [nearbyEndStops, setNearbyEndStops] = useState<TransitStop[]>([]);
   const [isLoadingStops, setIsLoadingStops] = useState(false);
 
+  // Payment screen state
+  const [showPaymentScreen, setShowPaymentScreen] = useState(false);
+
   // Services
   const [locationService] = useState(() => LocationService.getInstance());
   const [firebaseService] = useState(() => FirebaseService.getInstance());
@@ -99,6 +106,26 @@ const TransitScreen: React.FC = () => {
       fetchRoute();
     }
   }, [startLocation, destinationLocation]);
+
+  // Load redeemed transport rewards
+  useEffect(() => {
+    const loadRedeemedRewards = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const rewards = await firebaseService.getUserRedeemedRewards(currentUser.uid);
+        // Filter for transport category rewards that haven't been used for discount yet
+        const transportRewards = rewards.filter(reward => 
+          reward.category === 'transport' && !reward.usedForDiscount
+        );
+        setRedeemedTransportRewards(transportRewards);
+      } catch (error) {
+        console.error('Error loading redeemed transport rewards:', error);
+      }
+    };
+    
+    loadRedeemedRewards();
+  }, [currentUser, firebaseService]);
 
   const initializeLocation = async () => {
     try {
@@ -385,12 +412,23 @@ const TransitScreen: React.FC = () => {
 
   const confirmTrip = async () => {
     if (!routeData || !currentUser) return;
+    
+    // Show payment screen instead of directly completing the trip
+    setShowPaymentScreen(true);
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!routeData || !currentUser) return;
 
     const distanceKm = routeData.distance / 1000;
     const points = Math.floor(distanceKm * 4); // 4 points per km for public transport
 
     try {
-      // Save transit trip to Firebase
+      // Calculate payment information
+      const pricePerKm = 1.80;
+      const totalAmount = distanceKm * pricePerKm;
+      
+      // Save transit trip to Firebase with payment information
       const transitData = {
         userId: currentUser.uid,
         distance: distanceKm,
@@ -410,16 +448,47 @@ const TransitScreen: React.FC = () => {
         } : undefined,
         routeType: nearbyStartStops[0]?.type || 'bus', // Use the type of the selected transit stop
         transitMode: 'transit' as const,
+        payment: {
+          amount: totalAmount,
+          pricePerKm: pricePerKm,
+          currency: 'USD',
+          paymentMethod: 'Credit Card',
+          transactionId: `TRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          paidAt: new Date(),
+        },
       };
 
       await firebaseService.addTransitToHistory(transitData);
       console.log('Transit trip saved to Firebase');
+
+      // Mark reward as used for discount if one was applied
+      if (redeemedTransportRewards.length > 0) {
+        try {
+          await firebaseService.markRewardUsedForDiscount(
+            currentUser.uid, 
+            redeemedTransportRewards[0].id
+          );
+          console.log('Marked transport reward as used for discount');
+          
+          // Refresh the redeemed rewards list to remove used reward
+          const rewards = await firebaseService.getUserRedeemedRewards(currentUser.uid);
+          const transportRewards = rewards.filter(reward => 
+            reward.category === 'transport' && !reward.usedForDiscount
+          );
+          setRedeemedTransportRewards(transportRewards);
+        } catch (rewardError) {
+          console.error('Error marking reward as used:', rewardError);
+          // Don't fail the entire flow if reward marking fails
+        }
+      }
 
     } catch (error) {
       console.error('Error saving transit trip:', error);
       // Continue to completion screen even if save fails
     }
 
+    // Close payment screen and navigate to completion
+    setShowPaymentScreen(false);
     navigation.navigate('ActivityCompletion', {
       activityId: Date.now().toString(),
       mode: 'transit',
@@ -691,6 +760,23 @@ const TransitScreen: React.FC = () => {
           </Text>
         </View>
       )}
+
+      {/* Payment Screen */}
+      <PaymentScreen
+        visible={showPaymentScreen}
+        onClose={() => setShowPaymentScreen(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        tripType="transit"
+        distance={routeData ? routeData.distance / 1000 : 0}
+        duration={routeData ? routeData.duration : 0}
+        startLocation={startInput}
+        endLocation={destinationInput}
+        routeType={nearbyStartStops[0]?.type || 'bus'}
+        discount={redeemedTransportRewards.length > 0 ? {
+          percentage: 10, // 10% discount for transport rewards
+          rewardTitle: redeemedTransportRewards[0].title || '10% Off Public Transport'
+        } : undefined}
+      />
     </SafeAreaView>
   );
 };

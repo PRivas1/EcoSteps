@@ -114,7 +114,10 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.welcomeText}>Welcome back!</Text>
@@ -151,9 +154,6 @@ const HomeScreen: React.FC = () => {
                   <Text style={styles.levelSubtext}>
                     {Math.max(0, 100 - ((displayProfile?.totalPoints || 0) % 100))} pts to next level
                   </Text>
-                </View>
-                <View style={styles.refreshIndicator}>
-                  <Ionicons name="refresh" size={16} color="rgba(255,255,255,0.7)" />
                 </View>
               </View>
             </LinearGradient>
@@ -245,6 +245,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     padding: 20,
@@ -413,12 +416,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7F8C8D',
     textAlign: 'center',
-  },
-  refreshIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    opacity: 0.7,
   },
 });
 

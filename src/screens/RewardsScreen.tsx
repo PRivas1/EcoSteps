@@ -193,7 +193,10 @@ const RewardsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Header */}
         <View style={styles.header}>
           <LinearGradient
@@ -299,9 +302,18 @@ const RewardsScreen: React.FC = () => {
                     <Text style={styles.redeemedDate}>
                       Redeemed: {reward.redeemedAt ? new Date(reward.redeemedAt).toLocaleDateString() : 'Unknown'}
                     </Text>
+                    {reward.usedForDiscount && (
+                      <Text style={styles.usedForDiscountText}>
+                        ✅ Used for discount on {reward.discountUsedAt ? new Date(reward.discountUsedAt.toDate()).toLocaleDateString() : 'Unknown date'}
+                      </Text>
+                    )}
                   </View>
                   <View style={styles.redeemedBadge}>
-                    <Ionicons name="checkmark-circle" size={24} color="#27AE60" />
+                    <Ionicons 
+                      name={reward.usedForDiscount ? "star" : "checkmark-circle"} 
+                      size={24} 
+                      color={reward.usedForDiscount ? "#FFD93D" : "#27AE60"} 
+                    />
                   </View>
                 </View>
                 
@@ -362,6 +374,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     padding: 20,
@@ -584,6 +599,12 @@ const styles = StyleSheet.create({
     color: '#7F8C8D',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  usedForDiscountText: {
+    fontSize: 12,
+    color: '#FFD93D',
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
 

@@ -36,6 +36,15 @@ interface ActivityDetailModalProps {
     startStation?: { id: string; name: string; latitude: number; longitude: number; address: string };
     endStation?: { id: string; name: string; latitude: number; longitude: number; address: string };
     bikeShareSystem?: 'indego';
+    // Payment information
+    payment?: {
+      amount: number;
+      pricePerKm: number;
+      currency: string;
+      paymentMethod: string;
+      transactionId: string;
+      paidAt: Date;
+    };
   } | null;
 }
 
@@ -346,6 +355,56 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             )}
           </View>
 
+          {/* Payment Information */}
+          {activity.payment && (activity.type === 'cycling' || activity.type === 'transit') && (
+            <View style={styles.paymentSection}>
+              <Text style={styles.sectionTitle}>Payment Details</Text>
+              <View style={styles.paymentCard}>
+                <View style={styles.paymentHeader}>
+                  <View style={styles.paymentIcon}>
+                    <Ionicons name="card" size={20} color="#4ECDC4" />
+                  </View>
+                  <View style={styles.paymentInfo}>
+                    <Text style={styles.paymentTitle}>
+                      {activity.type === 'cycling' ? 'Bike Share Rental' : 'Transit Ticket'}
+                    </Text>
+                    <Text style={styles.paymentSubtitle}>
+                      Paid via {activity.payment.paymentMethod}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentAmount}>
+                    <Text style={styles.paymentPrice}>
+                      ${activity.payment.amount.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.paymentDetails}>
+                  <View style={styles.paymentRow}>
+                    <Text style={styles.paymentLabel}>Distance</Text>
+                    <Text style={styles.paymentValue}>{activity.distance.toFixed(2)} km</Text>
+                  </View>
+                  <View style={styles.paymentRow}>
+                    <Text style={styles.paymentLabel}>Rate per km</Text>
+                    <Text style={styles.paymentValue}>
+                      ${activity.payment.pricePerKm.toFixed(2)} {activity.payment.currency}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentRow}>
+                    <Text style={styles.paymentLabel}>Transaction ID</Text>
+                    <Text style={styles.paymentValue}>{activity.payment.transactionId}</Text>
+                  </View>
+                  <View style={styles.paymentRow}>
+                    <Text style={styles.paymentLabel}>Payment Date</Text>
+                    <Text style={styles.paymentValue}>
+                      {new Date(activity.payment.paidAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Route Information */}
           {activity.route && activity.route.length > 0 && (
             <View style={styles.routeSection}>
@@ -563,6 +622,73 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#2C3E50',
+  },
+  paymentSection: {
+    marginBottom: 24,
+  },
+  paymentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  paymentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  paymentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 4,
+  },
+  paymentSubtitle: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  paymentAmount: {
+    alignItems: 'flex-end',
+  },
+  paymentPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4ECDC4',
+  },
+  paymentDetails: {
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8E8',
+    paddingTop: 16,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  paymentValue: {
+    fontSize: 14,
+    color: '#2C3E50',
+    fontWeight: '500',
   },
 });
 

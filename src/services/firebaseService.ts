@@ -70,6 +70,15 @@ export interface TransitHistoryEntry {
   };
   routeType: 'bus' | 'train' | 'subway' | 'tram' | 'metro';
   transitMode: 'transit';
+  // Payment information
+  payment?: {
+    amount: number; // Total price paid
+    pricePerKm: number; // Rate per kilometer
+    currency: string; // Currency code (e.g., 'USD')
+    paymentMethod: string; // Payment method used
+    transactionId: string; // Mock transaction ID
+    paidAt: Date; // Payment timestamp
+  };
   createdAt: Date;
 }
 
@@ -97,6 +106,15 @@ export interface CyclingHistoryEntry {
   };
   bikeShareSystem: 'indego';
   cyclingMode: 'cycling';
+  // Payment information
+  payment?: {
+    amount: number; // Total price paid
+    pricePerKm: number; // Rate per kilometer
+    currency: string; // Currency code (e.g., 'USD')
+    paymentMethod: string; // Payment method used
+    transactionId: string; // Mock transaction ID
+    paidAt: Date; // Payment timestamp
+  };
   createdAt: Date;
 }
 
@@ -675,6 +693,8 @@ class FirebaseService {
       const userRedeemedRewardsRef = collection(firestore, 'users', userId, 'redeemedRewards');
       const docRef = await addDoc(userRedeemedRewardsRef, {
         ...rewardData,
+        usedForDiscount: false, // Track if reward has been used for discount
+        discountUsedAt: null, // Track when discount was used
         createdAt: serverTimestamp(),
       });
 
@@ -715,6 +735,22 @@ class FirebaseService {
     } catch (error) {
       console.error('Error getting user redeemed rewards:', error);
       return [];
+    }
+  }
+
+  // Mark a redeemed reward as used for discount
+  async markRewardUsedForDiscount(userId: string, rewardDocId: string): Promise<void> {
+    try {
+      const rewardRef = doc(firestore, 'users', userId, 'redeemedRewards', rewardDocId);
+      await updateDoc(rewardRef, {
+        usedForDiscount: true,
+        discountUsedAt: serverTimestamp(),
+      });
+      
+      console.log(`Marked reward ${rewardDocId} as used for discount for user ${userId}`);
+    } catch (error) {
+      console.error('Error marking reward as used for discount:', error);
+      throw error;
     }
   }
 

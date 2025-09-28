@@ -24,6 +24,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import LocationService from '../services/locationService';
 import FirebaseService from '../services/firebaseService';
 import IndegoService, { IndegoStation } from '../services/indegoService';
+import PaymentScreen from '../components/PaymentScreen';
 
 const { width, height } = Dimensions.get('window');
 
@@ -78,6 +79,9 @@ const CycleScreen: React.FC = () => {
   const [nearbyEndStations, setNearbyEndStations] = useState<IndegoStation[]>([]);
   const [allStations, setAllStations] = useState<IndegoStation[]>([]);
   const [isLoadingStations, setIsLoadingStations] = useState(false);
+
+  // Payment screen state
+  const [showPaymentScreen, setShowPaymentScreen] = useState(false);
 
   // Services
   const [locationService] = useState(() => LocationService.getInstance());
@@ -306,12 +310,23 @@ const CycleScreen: React.FC = () => {
 
   const confirmTrip = async () => {
     if (!routeData || !currentUser) return;
+    
+    // Show payment screen instead of directly completing the trip
+    setShowPaymentScreen(true);
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!routeData || !currentUser) return;
 
     const distanceKm = routeData.distance / 1000;
     const points = Math.floor(distanceKm * 8); // 8 points per km for cycling
 
     try {
-      // Save cycling trip to Firebase
+      // Calculate payment information
+      const pricePerKm = 2.50;
+      const totalAmount = distanceKm * pricePerKm;
+      
+      // Save cycling trip to Firebase with payment information
       const cyclingData = {
         userId: currentUser.uid,
         distance: distanceKm,
@@ -335,6 +350,14 @@ const CycleScreen: React.FC = () => {
         } : undefined,
         bikeShareSystem: 'indego' as const,
         cyclingMode: 'cycling' as const,
+        payment: {
+          amount: totalAmount,
+          pricePerKm: pricePerKm,
+          currency: 'USD',
+          paymentMethod: 'Credit Card',
+          transactionId: `CYC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          paidAt: new Date(),
+        },
       };
 
       await firebaseService.addCyclingToHistory(cyclingData);
@@ -345,6 +368,8 @@ const CycleScreen: React.FC = () => {
       // Continue to completion screen even if save fails
     }
 
+    // Close payment screen and navigate to completion
+    setShowPaymentScreen(false);
     navigation.navigate('ActivityCompletion', {
       activityId: Date.now().toString(),
       mode: 'cycle',
@@ -605,6 +630,18 @@ const CycleScreen: React.FC = () => {
           </Text>
         </View>
       )}
+
+      {/* Payment Screen */}
+      <PaymentScreen
+        visible={showPaymentScreen}
+        onClose={() => setShowPaymentScreen(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        tripType="cycling"
+        distance={routeData ? routeData.distance / 1000 : 0}
+        duration={routeData ? routeData.duration : 0}
+        startLocation={nearbyStartStations[0]?.name}
+        endLocation={nearbyEndStations[0]?.name}
+      />
     </SafeAreaView>
   );
 };

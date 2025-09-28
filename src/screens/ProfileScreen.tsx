@@ -9,6 +9,7 @@ import { RootState, AppDispatch } from '../store';
 import { signOutUser } from '../store/slices/authSlice';
 import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryEntry } from '../services/firebaseService';
 import ActivityDetailModal from '../components/ActivityDetailModal';
+import AllActivitiesModal from '../components/AllActivitiesModal';
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -24,6 +25,7 @@ const ProfileScreen: React.FC = () => {
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
+  const [showAllActivitiesModal, setShowAllActivitiesModal] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -135,6 +137,7 @@ const ProfileScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -208,7 +211,13 @@ const ProfileScreen: React.FC = () => {
         ...cyclingHistory.map(cycling => ({ ...cycling, type: 'cycling' as const }))
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-                              return allActivities.map((activity, index) => (
+      // Show only first 7 activities
+      const recentActivities = allActivities.slice(0, 7);
+      const hasMoreActivities = allActivities.length > 7;
+
+                              return (
+                                <>
+                                  {recentActivities.map((activity, index) => (
         <TouchableOpacity 
           key={`${activity.type}-${activity.id}-${index}`} 
           style={styles.walkCard}
@@ -245,7 +254,23 @@ const ProfileScreen: React.FC = () => {
                     </View>
                   </View>
                 </TouchableOpacity>
-              ));
+                                  ))}
+                                  
+                                  {/* View All Activities Button */}
+                                  {hasMoreActivities && (
+                                    <TouchableOpacity 
+                                      style={styles.viewAllButton}
+                                      onPress={() => setShowAllActivitiesModal(true)}
+                                      activeOpacity={0.7}
+                                    >
+                                      <Text style={styles.viewAllText}>
+                                        View All Activities ({allActivities.length})
+                                      </Text>
+                                      <Ionicons name="chevron-forward" size={16} color="#4ECDC4" />
+                                    </TouchableOpacity>
+                                  )}
+                                </>
+                              );
             })()
           ) : (
             <View style={styles.emptyState}>
@@ -325,6 +350,16 @@ const ProfileScreen: React.FC = () => {
         onClose={closeActivityDetail}
         activity={selectedActivity}
       />
+
+      {/* All Activities Modal */}
+      <AllActivitiesModal
+        visible={showAllActivitiesModal}
+        onClose={() => setShowAllActivitiesModal(false)}
+        walkHistory={walkHistory}
+        transitHistory={transitHistory}
+        cyclingHistory={cyclingHistory}
+        onActivityPress={handleActivityPress}
+      />
     </SafeAreaView>
   );
 };
@@ -336,6 +371,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     padding: 24,
@@ -568,6 +606,22 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  viewAllText: {
+    fontSize: 16,
+    color: '#4ECDC4',
+    fontWeight: '600',
   },
 });
 
