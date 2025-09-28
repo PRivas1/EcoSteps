@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -13,8 +13,6 @@ import { startActivity, addRoutePoint, stopActivity } from '../store/slices/acti
 import { completeActivity } from '../store/slices/userSlice';
 import { setUserLocation } from '../store/slices/locationSlice';
 import LocationService from '../services/locationService';
-import LocalStorageService from '../services/localStorageService';
-import SyncService from '../services/syncService';
 import FirebaseService from '../services/firebaseService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Location, RoutePoint } from '../types';
@@ -36,8 +34,6 @@ const WalkScreen: React.FC = () => {
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
 
   const [locationService] = useState(() => LocationService.getInstance());
-  const [localStorageService] = useState(() => LocalStorageService.getInstance());
-  const [syncService] = useState(() => SyncService.getInstance());
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
@@ -164,7 +160,7 @@ const WalkScreen: React.FC = () => {
       dispatch(stopActivity({ endLocation: endLocation || undefined }));
       dispatch(completeActivity({ points, distance: currentDistance }));
 
-      // Save locally first, then trigger background sync
+            // Save directly to Firebase
       if (currentUser && currentDistance > 0) {
         const walkData = {
           userId: currentUser.uid,
@@ -183,30 +179,28 @@ const WalkScreen: React.FC = () => {
         };
 
         try {
-          const localId = await localStorageService.saveWalkLocally(walkData);
-          console.log('Walk saved locally with ID:', localId);
-          
-                        // Trigger background sync
-              syncService.syncUnsyncedWalks();
+          // Save directly to Firebase
+          const walkId = await firebaseService.addWalkToHistory(walkData);
+          console.log('Walk saved to Firebase with ID:', walkId);
 
-              // Refresh Firebase profile after activity completion
-              try {
-                await firebaseService.refreshUserStats(currentUser.uid);
-                const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
-                setFirebaseProfile(updatedProfile);
-              } catch (profileError) {
-                console.error('Error refreshing profile after walk:', profileError);
-              }
-              
-            } catch (localError) {
-              console.error('Error saving walk locally:', localError);
-              Alert.alert(
-                'Save Error',
-                'Failed to save walk data. Please try again.',
-                [{ text: 'OK' }]
-              );
-              return;
-            }
+          // Refresh Firebase profile after activity completion
+          try {
+            await firebaseService.refreshUserStats(currentUser.uid);
+            const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
+            setFirebaseProfile(updatedProfile);
+          } catch (profileError) {
+            console.error('Error refreshing profile after walk:', profileError);
+          }
+          
+        } catch (firebaseError) {
+          console.error('Error saving walk to Firebase:', firebaseError);
+          Alert.alert(
+            'Save Error',
+            'Failed to save walk data to cloud. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
       }
 
       navigation.navigate('ActivityCompletion', {
@@ -229,6 +223,8 @@ const WalkScreen: React.FC = () => {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const insets = useSafeAreaInsets();
 
   const renderLocationStatus = () => {
     if (!isLocationEnabled) {
@@ -255,7 +251,7 @@ const WalkScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -312,9 +308,9 @@ const WalkScreen: React.FC = () => {
               {routePoints > 0 && (
                 <Text style={styles.routeText}>📍 {routePoints} GPS points recorded</Text>
               )}
-              {isSyncing && (
-                <Text style={styles.syncText}>💾 Saving locally...</Text>
-              )}
+                                    {isSyncing && (
+                        <Text style={styles.syncText}>☁️ Saving to cloud...</Text>
+                      )}
             </View>
           </View>
         </View>
@@ -354,9 +350,9 @@ const WalkScreen: React.FC = () => {
                 color="#FFFFFF"
                 style={styles.buttonIcon}
               />
-              <Text style={styles.buttonText}>
-                {isSyncing ? 'Saving...' : isTracking ? 'Stop Walk' : 'Start Walk'}
-              </Text>
+                                    <Text style={styles.buttonText}>
+                        {isSyncing ? 'Saving to Cloud...' : isTracking ? 'Stop Walk' : 'Start Walk'}
+                      </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -374,7 +370,7 @@ const WalkScreen: React.FC = () => {
         {/* Add some extra padding at the bottom for better scrolling */}
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

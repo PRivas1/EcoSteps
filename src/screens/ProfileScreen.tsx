@@ -139,10 +139,18 @@ const ProfileScreen: React.FC = () => {
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        alwaysBounceVertical={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Screen Title */}
+        <View style={styles.screenHeader}>
+          <Text style={styles.screenTitle}>Profile</Text>
+        </View>
+        
         {/* Header */}
         <LinearGradient
           colors={['#4ECDC4', '#44A08D'] as const}
@@ -374,7 +382,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 20,
+  },
+  screenHeader: {
+    padding: 20,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C3E50',
   },
   header: {
     padding: 24,

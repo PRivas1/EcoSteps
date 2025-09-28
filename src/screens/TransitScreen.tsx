@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -58,6 +58,7 @@ const TransitScreen: React.FC = () => {
   const navigation = useNavigation<TransitScreenNavigationProp>();
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const insets = useSafeAreaInsets();
   
   // Redeemed rewards state
   const [redeemedTransportRewards, setRedeemedTransportRewards] = useState<any[]>([]);
@@ -527,7 +528,7 @@ const TransitScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Search Inputs */}
       <View style={styles.searchContainer}>
         <View style={styles.inputWrapper}>
@@ -777,7 +778,7 @@ const TransitScreen: React.FC = () => {
           rewardTitle: redeemedTransportRewards[0].title || '10% Off Public Transport'
         } : undefined}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

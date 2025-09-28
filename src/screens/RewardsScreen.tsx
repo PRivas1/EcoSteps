@@ -196,9 +196,17 @@ const RewardsScreen: React.FC = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView 
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        bounces={true}
+        alwaysBounceVertical={true}
       >
+        {/* Screen Title */}
+        <View style={styles.screenHeader}>
+          <Text style={styles.screenTitle}>Rewards</Text>
+        </View>
+        
         {/* Header */}
         <View style={styles.header}>
           <LinearGradient
@@ -377,8 +385,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 20,
+  },
+  screenHeader: {
+    padding: 20,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C3E50',
   },
   header: {
     padding: 20,

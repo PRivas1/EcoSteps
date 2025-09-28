@@ -64,33 +64,27 @@ const MainTabs = () => {
           paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 10, 5) : 5,
           height: Platform.OS === 'ios' ? 60 + Math.max(insets.bottom - 10, 0) : 60,
         },
-        headerStyle: styles.header,
-        headerTintColor: '#2C3E50',
-        headerTitleStyle: styles.headerTitle,
       })}
     >
       <Tab.Screen 
         name="Home" 
         component={HomeScreen} 
         options={{ 
-          title: 'EcoSteps',
-          headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen} 
         options={{ 
-          title: 'Profile',
-          headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
       <Tab.Screen 
         name="Rewards" 
         component={RewardsScreen} 
         options={{ 
-          title: 'Rewards',
-          headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
     </Tab.Navigator>
@@ -170,6 +164,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    height: 50, // Reduced header height
   },
   headerTitle: {
     fontWeight: 'bold',

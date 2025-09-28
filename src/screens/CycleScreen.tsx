@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -50,6 +50,7 @@ const CycleScreen: React.FC = () => {
   const navigation = useNavigation<CycleScreenNavigationProp>();
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const insets = useSafeAreaInsets();
 
   // Location states
   const [startLocation, setStartLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -408,7 +409,7 @@ const CycleScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Search Inputs */}
       <View style={styles.searchContainer}>
         <View style={styles.inputWrapper}>
@@ -642,7 +643,7 @@ const CycleScreen: React.FC = () => {
         startLocation={nearbyStartStations[0]?.name}
         endLocation={nearbyEndStations[0]?.name}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
