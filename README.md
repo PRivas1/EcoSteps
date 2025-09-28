@@ -76,21 +76,11 @@ EcoSteps is a React Native mobile app that incentivizes users to choose eco-frie
 2. **Start Development Server**
 
    ```bash
-   npm start
+   npx expo start -c
    ```
 
-3. **Run on Platform**
+3. **Connect using the Expo app**
 
-   ```bash
-   # iOS
-   npm run ios
-
-   # Android
-   npm run android
-
-   # Web (for development)
-   npm run web
-   ```
 
 ### Configuration
 
