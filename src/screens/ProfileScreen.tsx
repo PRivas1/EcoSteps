@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { RootState, AppDispatch } from '../store';
 import { signOutUser } from '../store/slices/authSlice';
 import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryEntry } from '../services/firebaseService';
+import ActivityDetailModal from '../components/ActivityDetailModal';
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -21,6 +22,8 @@ const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
+  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [showActivityDetail, setShowActivityDetail] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -116,6 +119,16 @@ const ProfileScreen: React.FC = () => {
     return `${minutes}m`;
   };
 
+  const handleActivityPress = (activity: any) => {
+    setSelectedActivity(activity);
+    setShowActivityDetail(true);
+  };
+
+  const closeActivityDetail = () => {
+    setShowActivityDetail(false);
+    setSelectedActivity(null);
+  };
+
   const profileData = firebaseProfile || userProfile;
 
   return (
@@ -196,7 +209,12 @@ const ProfileScreen: React.FC = () => {
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                               return allActivities.map((activity, index) => (
-        <View key={`${activity.type}-${activity.id}-${index}`} style={styles.walkCard}>
+        <TouchableOpacity 
+          key={`${activity.type}-${activity.id}-${index}`} 
+          style={styles.walkCard}
+          onPress={() => handleActivityPress(activity)}
+          activeOpacity={0.7}
+        >
               <View style={styles.walkHeader}>
                 <View style={styles.walkIcon}>
                   <Ionicons 
@@ -222,8 +240,11 @@ const ProfileScreen: React.FC = () => {
                       <Text style={styles.walkDistance}>{activity.distance.toFixed(2)} km</Text>
                       <Text style={styles.walkPoints}>+{activity.points} pts</Text>
                     </View>
+                    <View style={styles.chevronIcon}>
+                      <Ionicons name="chevron-forward" size={16} color="#BDC3C7" />
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ));
             })()
           ) : (
@@ -297,6 +318,13 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Activity Detail Modal */}
+      <ActivityDetailModal
+        visible={showActivityDetail}
+        onClose={closeActivityDetail}
+        activity={selectedActivity}
+      />
     </SafeAreaView>
   );
 };
@@ -535,6 +563,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#BDC3C7',
     textAlign: 'center',
+  },
+  chevronIcon: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

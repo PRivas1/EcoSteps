@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 
 import { RootState, AppDispatch } from '../store';
 import { startActivity, addRoutePoint, stopActivity } from '../store/slices/activitySlice';
@@ -43,6 +44,16 @@ const WalkScreen: React.FC = () => {
   const [currentDistance, setCurrentDistance] = useState(0);
   const [routePoints, setRoutePoints] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Route tracking state
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [startLocation, setStartLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 39.9526, // Philadelphia coordinates
+    longitude: -75.1652,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
 
   // Load Firebase profile data
   useEffect(() => {
@@ -98,21 +109,36 @@ const WalkScreen: React.FC = () => {
       setTimeElapsed(0);
       setCurrentDistance(0);
       setRoutePoints(0);
+      setRouteCoordinates([]);
 
-      const startLocation = await locationService.getCurrentLocation();
-      if (startLocation) {
-        dispatch(setUserLocation(startLocation));
-        dispatch(startActivity({ mode: 'walk', startLocation }));
+      const currentLocation = await locationService.getCurrentLocation();
+      if (currentLocation) {
+        const locationCoord = { latitude: currentLocation.latitude, longitude: currentLocation.longitude };
+        setStartLocation(locationCoord);
+        setRouteCoordinates([locationCoord]);
+        setMapRegion({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+        dispatch(setUserLocation(currentLocation));
+        dispatch(startActivity({ mode: 'walk', startLocation: currentLocation }));
       }
 
       // Start location tracking
       locationService.startLocationTracking((location: Location) => {
+        const newCoord = { latitude: location.latitude, longitude: location.longitude };
+        
         dispatch(setUserLocation(location));
         dispatch(addRoutePoint({
           latitude: location.latitude,
           longitude: location.longitude,
           timestamp: Date.now(),
         }));
+        
+        // Add to route coordinates for map display
+        setRouteCoordinates(prev => [...prev, newCoord]);
         setRoutePoints(prev => prev + 1);
         setCurrentDistance(prev => prev + 0.01);
       });
@@ -149,7 +175,11 @@ const WalkScreen: React.FC = () => {
           endTime: new Date(),
           startLocation: userLocation || undefined,
           endLocation: endLocation || undefined,
-          route: [],
+          route: routeCoordinates.map((coord, index) => ({
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            timestamp: Date.now() - (routeCoordinates.length - index) * 1000, // Approximate timestamps
+          })),
         };
 
         try {
@@ -233,28 +263,57 @@ const WalkScreen: React.FC = () => {
         bounces={true}
       >
         <View style={styles.mapContainer}>
-          <View style={styles.mapPlaceholder}>
-            <View style={styles.mapContent}>
-              <Ionicons name="location" size={64} color="#4ECDC4" />
-              <Text style={styles.mapTitle}>GPS Tracking {isTracking ? 'Active' : 'Ready'}</Text>
-              <Text style={styles.mapSubtitle}>
-                {userLocation
-                  ? `Lat: ${userLocation.latitude.toFixed(6)}\nLng: ${userLocation.longitude.toFixed(6)}`
-                  : 'Getting location...'
-                }
-              </Text>
-              {routePoints > 0 && (
-                <View style={styles.routeInfo}>
-                  <Text style={styles.routeText}>
-                    📍 {routePoints} GPS points recorded
-                  </Text>
-                </View>
-              )}
+          <MapView
+            style={styles.map}
+            provider={PROVIDER_DEFAULT}
+            region={mapRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            followsUserLocation={isTracking}
+            toolbarEnabled={false}
+          >
+            {/* Start Location Marker */}
+            {startLocation && (
+              <Marker
+                coordinate={startLocation}
+                title="Start"
+                description="Walking started here"
+                pinColor="green"
+              />
+            )}
+
+            {/* Current Location Marker */}
+            {userLocation && isTracking && (
+              <Marker
+                coordinate={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
+                title="Current Position"
+                description="You are here"
+                pinColor="blue"
+              />
+            )}
+
+            {/* Route Path */}
+            {routeCoordinates.length > 1 && (
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="#4ECDC4"
+                strokeWidth={4}
+                lineCap="round"
+                lineJoin="round"
+              />
+            )}
+          </MapView>
+
+          {/* Overlay Status Information */}
+          <View style={styles.mapOverlay}>
+            <View style={styles.statusContainer}>
+              <Text style={styles.statusTitle}>GPS Tracking {isTracking ? 'Active' : 'Ready'}</Text>
               {renderLocationStatus()}
+              {routePoints > 0 && (
+                <Text style={styles.routeText}>📍 {routePoints} GPS points recorded</Text>
+              )}
               {isSyncing && (
-                <View style={styles.syncStatus}>
-                  <Text style={styles.syncText}>💾 Saving locally...</Text>
-                </View>
+                <Text style={styles.syncText}>💾 Saving locally...</Text>
               )}
             </View>
           </View>
@@ -486,6 +545,26 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 30,
+  },
+  map: {
+    flex: 1,
+    borderRadius: 15,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    textAlign: 'center',
+    marginBottom: 5,
   },
 });
 

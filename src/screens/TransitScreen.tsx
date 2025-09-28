@@ -75,8 +75,8 @@ const TransitScreen: React.FC = () => {
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
+    latitude: 39.9526, // Philadelphia coordinates
+    longitude: -75.1652,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
