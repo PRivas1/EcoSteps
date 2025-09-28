@@ -16,6 +16,8 @@ import LocationService from '../services/locationService';
 import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Location, RoutePoint } from '../types';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance } from '../utils/unitUtils';
 
 type WalkScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Walk'>;
 
@@ -29,6 +31,7 @@ const WalkScreen: React.FC = () => {
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const isLocationEnabled = useSelector((state: RootState) => (state as any).location?.isLocationEnabled || false);
+  const { unitSystem } = useUnit();
   
   // Add Firebase profile state
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
@@ -422,7 +425,7 @@ const WalkScreen: React.FC = () => {
             <Text style={styles.statLabel}>Time</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{currentDistance.toFixed(2)} km</Text>
+            <Text style={styles.statValue}>{formatDistance(currentDistance, unitSystem, 2)}</Text>
             <Text style={styles.statLabel}>Distance</Text>
           </View>
           <View style={styles.statCard}>
@@ -464,7 +467,7 @@ const WalkScreen: React.FC = () => {
             Total Points: {(firebaseProfile || userProfile)?.totalPoints || 0} | Level: {(firebaseProfile || userProfile)?.level || 1}
           </Text>
           <Text style={styles.userStatsText}>
-            Activities: {(firebaseProfile || userProfile)?.activitiesCompleted || 0} | Distance: {((firebaseProfile || userProfile)?.totalDistance || 0).toFixed(2)} km
+            Activities: {(firebaseProfile || userProfile)?.activitiesCompleted || 0} | Distance: {formatDistance((firebaseProfile || userProfile)?.totalDistance || 0, unitSystem, 2)}
           </Text>
         </View>
 

@@ -13,6 +13,8 @@ import FirebaseService, { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryE
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import AllActivitiesModal from '../components/AllActivitiesModal';
 import { useTheme } from '../contexts/ThemeContext';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance, formatWeight } from '../utils/unitUtils';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -22,6 +24,7 @@ const ProfileScreen: React.FC = () => {
   const userProfile = useSelector((state: RootState) => state.user.profile);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const { theme } = useTheme();
+  const { unitSystem } = useUnit();
   
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   const [walkHistory, setWalkHistory] = useState<WalkHistoryEntry[]>([]);
@@ -197,21 +200,21 @@ const ProfileScreen: React.FC = () => {
             </View>
             <View style={styles.statCard}>
               <Ionicons name="map" size={32} color="#E74C3C" />
-              <Text style={styles.statNumber}>{(profileData?.totalDistance || 0).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Total km</Text>
+              <Text style={styles.statNumber}>{formatDistance(profileData?.totalDistance || 0, unitSystem, 1)}</Text>
+              <Text style={styles.statLabel}>Total Distance</Text>
             </View>
           </View>
           
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Ionicons name="leaf" size={32} color="#27AE60" />
-              <Text style={styles.statNumber}>{((profileData?.totalCarbonSaved || 0) / 1000).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>CO₂ Saved (kg)</Text>
+              <Text style={styles.statNumber}>{formatWeight((profileData?.totalCarbonSaved || 0) / 1000, unitSystem, 1)}</Text>
+              <Text style={styles.statLabel}>CO₂ Saved</Text>
             </View>
             <View style={styles.statCard}>
               <Ionicons name="earth" size={32} color="#2E8B57" />
-              <Text style={styles.statNumber}>{Math.round((profileData?.totalCarbonSaved || 0) / 251) || 0}</Text>
-              <Text style={styles.statLabel}>Car km Avoided</Text>
+              <Text style={styles.statNumber}>{formatDistance((profileData?.totalCarbonSaved || 0) / 251, unitSystem, 0)}</Text>
+              <Text style={styles.statLabel}>Car Distance Avoided</Text>
             </View>
           </View>
         </View>
@@ -273,7 +276,7 @@ const ProfileScreen: React.FC = () => {
                   </Text>
                 </View>
                     <View style={styles.walkStats}>
-                      <Text style={styles.walkDistance}>{activity.distance.toFixed(2)} km</Text>
+                      <Text style={styles.walkDistance}>{formatDistance(activity.distance, unitSystem, 2)}</Text>
                       <Text style={styles.walkPoints}>+{activity.points} pts</Text>
                     </View>
                     <View style={styles.chevronIcon}>

@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { WalkHistoryEntry, TransitHistoryEntry, CyclingHistoryEntry } from '../services/firebaseService';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance } from '../utils/unitUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +33,8 @@ const AllActivitiesModal: React.FC<AllActivitiesModalProps> = ({
   cyclingHistory,
   onActivityPress,
 }) => {
+  const { unitSystem } = useUnit();
+  
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -108,7 +112,7 @@ const AllActivitiesModal: React.FC<AllActivitiesModalProps> = ({
                       </Text>
                     </View>
                     <View style={styles.activityStats}>
-                      <Text style={styles.activityDistance}>{activity.distance.toFixed(2)} km</Text>
+                      <Text style={styles.activityDistance}>{formatDistance(activity.distance, unitSystem, 2)}</Text>
                       <Text style={styles.activityPoints}>+{activity.points} pts</Text>
                     </View>
                     <View style={styles.chevronIcon}>

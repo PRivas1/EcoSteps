@@ -15,6 +15,7 @@ import LocationService from './src/services/locationService';
 import LocalStorageService from './src/services/localStorageService';
 import SyncService from './src/services/syncService';
 import { ThemeProvider } from './src/contexts/ThemeContext';
+import { UnitProvider } from './src/contexts/UnitContext';
 
 const Stack = createStackNavigator();
 
@@ -90,8 +91,10 @@ export default function App() {
     <SafeAreaProvider>
       <Provider store={store}>
         <ThemeProvider>
-          <StatusBar style="auto" />
-          <AppContent />
+          <UnitProvider>
+            <StatusBar style="auto" />
+            <AppContent />
+          </UnitProvider>
         </ThemeProvider>
       </Provider>
     </SafeAreaProvider>

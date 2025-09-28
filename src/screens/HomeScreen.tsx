@@ -17,6 +17,8 @@ import { RootState } from '../store';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import FirebaseService from '../services/firebaseService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance, formatDistanceShort } from '../utils/unitUtils';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -27,6 +29,7 @@ const HomeScreen: React.FC = () => {
   const userProfile = useSelector((state: RootState) => state.user.profile);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const { theme } = useTheme();
+  const { unitSystem } = useUnit();
   const [firebaseProfile, setFirebaseProfile] = useState<any>(null);
   const [firebaseService] = useState(() => FirebaseService.getInstance());
   
@@ -86,7 +89,7 @@ const HomeScreen: React.FC = () => {
       title: 'Walk on Foot',
       icon: 'walk',
       color: ['#A8E6CF', '#7FCDCD'] as const,
-      points: '10 pts/km',
+      points: `10 pts/${unitSystem === 'metric' ? 'km' : 'mi'}`,
       description: 'Track your walking route',
       screen: 'Walk' as const,
     },
@@ -95,7 +98,7 @@ const HomeScreen: React.FC = () => {
       title: 'Cycle',
       icon: 'bicycle',
       color: ['#FFD93D', '#FF8C94'] as const,
-      points: '8 pts/km',
+      points: `8 pts/${unitSystem === 'metric' ? 'km' : 'mi'}`,
       description: 'Find nearby bike stations',
       screen: 'Cycle' as const,
     },
@@ -104,7 +107,7 @@ const HomeScreen: React.FC = () => {
       title: 'Take the Bus/Train',
       icon: 'bus',
       color: ['#A8C8EC', '#88E5A3'] as const,
-      points: '4 pts/km',
+      points: `4 pts/${unitSystem === 'metric' ? 'km' : 'mi'}`,
       description: 'Plan your public transport',
       screen: 'Transit' as const,
     },
@@ -240,8 +243,8 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.statLabel}>Activities</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{(displayProfile?.totalDistance || 0).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Total km</Text>
+              <Text style={styles.statValue}>{formatDistance(displayProfile?.totalDistance || 0, unitSystem, 1)}</Text>
+              <Text style={styles.statLabel}>Total Distance</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{displayProfile?.badges?.length || 0}</Text>

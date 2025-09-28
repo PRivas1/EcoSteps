@@ -15,21 +15,20 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useTheme } from '../contexts/ThemeContext';
+import { useUnit } from '../contexts/UnitContext';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const { theme, toggleTheme, isDarkMode } = useTheme();
+  const { unitSystem, toggleUnitSystem, isMetric } = useUnit();
   
   // User profile states
   const [name, setName] = useState(currentUser?.displayName || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
-  
-  // App preferences states
-  const [isMetricSystem, setIsMetricSystem] = useState(true);
 
   const handleSaveName = () => {
     // TODO: Implement name update logic with Firebase
@@ -49,9 +48,8 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleToggleUnits = () => {
-    setIsMetricSystem(!isMetricSystem);
-    // TODO: Implement unit system toggle logic
-    Alert.alert('Info', `Switched to ${!isMetricSystem ? 'Metric' : 'Imperial'} system`);
+    toggleUnitSystem();
+    Alert.alert('Info', `Switched to ${isMetric ? 'Imperial' : 'Metric'} system`);
   };
 
   const styles = createStyles(theme);
@@ -201,12 +199,12 @@ const SettingsScreen: React.FC = () => {
                  <View style={styles.settingContent}>
                    <Text style={styles.settingLabel}>Unit System</Text>
                    <Text style={styles.settingDescription}>
-                     {isMetricSystem ? 'Metric (km, kg)' : 'Imperial (miles, lbs)'}
+                     {isMetric ? 'Metric (km, kg)' : 'Imperial (miles, lbs)'}
                    </Text>
                  </View>
                </View>
                <Switch
-                 value={isMetricSystem}
+                 value={isMetric}
                  onValueChange={handleToggleUnits}
                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                  thumbColor={theme.colors.white}

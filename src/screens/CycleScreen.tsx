@@ -25,6 +25,8 @@ import LocationService from '../services/locationService';
 import FirebaseService, { calculateCarbonSavings } from '../services/firebaseService';
 import IndegoService, { IndegoStation } from '../services/indegoService';
 import PaymentScreen from '../components/PaymentScreen';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance } from '../utils/unitUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,6 +52,7 @@ const CycleScreen: React.FC = () => {
   const navigation = useNavigation<CycleScreenNavigationProp>();
   const userLocation = useSelector((state: RootState) => (state as any).location?.userLocation);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const { unitSystem } = useUnit();
   const insets = useSafeAreaInsets();
 
   // Location states
@@ -391,11 +394,9 @@ const CycleScreen: React.FC = () => {
     return `${minutes}m`;
   };
 
-  const formatDistance = (meters: number): string => {
-    if (meters >= 1000) {
-      return `${(meters / 1000).toFixed(1)} km`;
-    }
-    return `${Math.round(meters)} m`;
+  const formatDistanceLocal = (meters: number): string => {
+    const km = meters / 1000;
+    return formatDistance(km, unitSystem, 1);
   };
 
   const renderSuggestionItem = ({ item, isStart }: { item: LocationSuggestion; isStart: boolean }) => (
@@ -600,7 +601,7 @@ const CycleScreen: React.FC = () => {
             <View style={styles.routeInfo}>
               <View style={styles.routeStat}>
                 <Ionicons name="speedometer-outline" size={24} color="#FFFFFF" />
-                <Text style={styles.routeStatValue}>{formatDistance(routeData.distance)}</Text>
+                <Text style={styles.routeStatValue}>{formatDistanceLocal(routeData.distance)}</Text>
                 <Text style={styles.routeStatLabel}>Distance</Text>
               </View>
               

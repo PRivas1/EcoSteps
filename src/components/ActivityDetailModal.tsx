@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
+import { useUnit } from '../contexts/UnitContext';
+import { formatDistance } from '../utils/unitUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -53,6 +55,8 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
   onClose,
   activity,
 }) => {
+  const { unitSystem } = useUnit();
+  
   if (!activity) return null;
 
   const formatDate = (date: Date) => {
@@ -199,7 +203,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Ionicons name="map" size={24} color="#4ECDC4" />
-              <Text style={styles.statValue}>{activity.distance.toFixed(2)} km</Text>
+              <Text style={styles.statValue}>{formatDistance(activity.distance, unitSystem, 2)}</Text>
               <Text style={styles.statLabel}>Distance</Text>
             </View>
             <View style={styles.statCard}>
@@ -383,10 +387,10 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                 <View style={styles.paymentDetails}>
                   <View style={styles.paymentRow}>
                     <Text style={styles.paymentLabel}>Distance</Text>
-                    <Text style={styles.paymentValue}>{activity.distance.toFixed(2)} km</Text>
+                    <Text style={styles.paymentValue}>{formatDistance(activity.distance, unitSystem, 2)}</Text>
                   </View>
                   <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Rate per km</Text>
+                    <Text style={styles.paymentLabel}>Rate per {unitSystem === 'metric' ? 'km' : 'mi'}</Text>
                     <Text style={styles.paymentValue}>
                       ${activity.payment.pricePerKm.toFixed(2)} {activity.payment.currency}
                     </Text>
@@ -419,7 +423,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                   <View style={styles.routeStat}>
                     <Ionicons name="trending-up" size={16} color="#27AE60" />
                     <Text style={styles.routeStatText}>
-                      Avg speed: {((activity.distance / activity.duration) * 3600).toFixed(1)} km/h
+                      Avg speed: {((activity.distance / activity.duration) * 3600).toFixed(1)} {unitSystem === 'metric' ? 'km/h' : 'mph'}
                     </Text>
                   </View>
                 </View>
